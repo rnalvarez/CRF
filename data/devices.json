@@ -1,0 +1,75 @@
+{
+  "boya_wm8_pro_k2": {
+    "name": "BOYA BY-WM8 Pro K2",
+    "kind": "Analog UHF",
+    "candidateModel": "channels",
+    "banks": [
+      {
+        "name": "A",
+        "start": 556.71,
+        "step": 0.41,
+        "channels": 48
+      },
+      {
+        "name": "B",
+        "start": 576.39,
+        "step": 0.41,
+        "channels": 48
+      }
+    ],
+    "powerOptionsMw": [],
+    "notes": "Banco A/B, canales 01–48. Frecuencias calculadas a partir de los extremos y 48 posiciones."
+  },
+  "sennheiser_ew100_g4_g": {
+    "name": "Sennheiser EW 100 G4 · Range G",
+    "kind": "Analog wideband FM",
+    "candidateModel": "continuous",
+    "min": 566.0,
+    "max": 608.0,
+    "step": 0.025,
+    "powerOptionsMw": [
+      30
+    ],
+    "notes": "Range G: 566–608 MHz; 25 kHz tuning. El usuario puede seleccionar banco/canal por separado en el equipo."
+  },
+  "deity_theos": {
+    "name": "Deity THEOS DBTX",
+    "kind": "Digital UHF",
+    "candidateModel": "continuous",
+    "min": 550.0,
+    "max": 960.0,
+    "step": 0.1,
+    "bandwidth": 0.2,
+    "channelSpacing": 0.7,
+    "powerOptionsMw": [
+      10,
+      20,
+      25,
+      50,
+      100
+    ],
+    "notes": "El rango efectivo disponible depende de la variante/firmware; en V1 se muestra el rango de especificación como capacidad de hardware. Potencia seleccionable según variante/regulación."
+  },
+  "saramonic_k9": {
+    "name": "Saramonic K9",
+    "kind": "Digital UHF",
+    "candidateModel": "continuous",
+    "min": 550.0,
+    "max": 960.0,
+    "step": 0.1,
+    "bandwidth": 0.2,
+    "channelSpacing": 0.7,
+    "powerOptionsMw": [
+      10,
+      25,
+      50,
+      100
+    ],
+    "notes": "Rango de espectro publicado 550–960 MHz; 100 kHz step, 200 kHz RF bandwidth, 700 kHz channel spacing."
+  },
+  "custom": {
+    "name": "Dispositivo personalizado",
+    "kind": "Custom",
+    "candidateModel": "custom"
+  }
+}

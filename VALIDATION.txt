@@ -1,0 +1,10 @@
+JavaScript syntax check: FAIL
+/mnt/data/rf-coordinator/app.js:73
+    if(k===1){yield prefix.concat(total);return}
+                    ^^^^^^
+
+SyntaxError: Unexpected identifier 'prefix'
+[90m    at wrapSafe (node:internal/modules/cjs/loader:1662:18)[39m
+[90m    at checkSyntax (node:internal/main/check_syntax:78:3)[39m
+
+Node.js v22.16.0
