@@ -69,10 +69,6 @@ function intermods(freqs,maxOrder=5){
   const products=[];
   const uniq=new Set();
   const n=freqs.length;
-  function compositions(total,k,prefix=[]){
-    if(k===1){yield prefix.concat(total);return}
-    for(let i=0;i<=total;i++)yield* compositions(total-i,k-1,prefix.concat(i));
-  }
   // For each number of participating carrier terms, enumerate coefficients
   // in [-order,order], requiring sum(abs(coeffs)) <= order and at least 2 terms.
   for(let order=2;order<=maxOrder;order++){
@@ -103,9 +99,7 @@ function powerPenalty(){
   return 0;
 }
 
-function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts){
-  const freqs=occupied;
-  const allIm=intermods(freqs,5);
+function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm){
   const pairDistances=occupied.map(f=>Math.abs(cand.freq-f));
   const minSep=Math.min(...pairDistances);
   let score=100;
@@ -141,7 +135,8 @@ function calculate(){
   if(!state.occupied.length){$("results").innerHTML="<p class='hint'>Cargá al menos una frecuencia ocupada para generar recomendaciones.</p>";return}
   const d=state.devices[$("deviceSelect").value];
   let candidates=generateCandidates(d,min,max).filter(c=>!state.occupied.some(f=>Math.abs(f-c.freq)<1e-6));
-  const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts)).sort((a,b)=>b.score-a.score).slice(0,parseInt($("resultCount").value)||20);
+  const allIm=intermods(state.occupied,5);
+  const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm)).sort((a,b)=>b.score-a.score).slice(0,parseInt($("resultCount").value)||20);
   $("results").innerHTML=results.length?results.map((r,i)=>`
     <div class="result ${r.cls}">
       <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${Math.round(r.score)}/100<br><small>${r.label}</small></div></div>
