@@ -3,73 +3,46 @@
     "name": "BOYA BY-WM8 Pro K2",
     "kind": "Analog UHF",
     "candidateModel": "channels",
+    "modulation": "analog",
+    "confidence": "verified",
     "banks": [
-      {
-        "name": "A",
-        "start": 556.71,
-        "step": 0.41,
-        "channels": 48
-      },
-      {
-        "name": "B",
-        "start": 576.39,
-        "step": 0.41,
-        "channels": 48
-      }
+      { "name": "A", "start": 556.71, "step": 0.41, "channels": 48 },
+      { "name": "B", "start": 576.39, "step": 0.41, "channels": 48 }
     ],
     "powerOptionsMw": [],
     "notes": "Banco A/B, canales 01–48. Frecuencias calculadas a partir de los extremos y 48 posiciones."
   },
-  "sennheiser_ew100_g4_g": {
-    "name": "Sennheiser EW 100 G4 · Range G",
-    "kind": "Analog wideband FM",
-    "candidateModel": "continuous",
-    "min": 566.0,
-    "max": 608.0,
-    "step": 0.025,
-    "powerOptionsMw": [
-      30
-    ],
-    "notes": "Range G: 566–608 MHz; 25 kHz tuning. El usuario puede seleccionar banco/canal por separado en el equipo."
-  },
-  "deity_theos": {
-    "name": "Deity THEOS DBTX",
-    "kind": "Digital UHF",
-    "candidateModel": "continuous",
-    "min": 550.0,
-    "max": 960.0,
-    "step": 0.1,
-    "bandwidth": 0.2,
-    "channelSpacing": 0.7,
-    "powerOptionsMw": [
-      10,
-      20,
-      25,
-      50,
-      100
-    ],
-    "notes": "El rango efectivo disponible depende de la variante/firmware; en V1 se muestra el rango de especificación como capacidad de hardware. Potencia seleccionable según variante/regulación."
-  },
-  "saramonic_k9": {
-    "name": "Saramonic K9",
-    "kind": "Digital UHF",
-    "candidateModel": "continuous",
-    "min": 550.0,
-    "max": 960.0,
-    "step": 0.1,
-    "bandwidth": 0.2,
-    "channelSpacing": 0.7,
-    "powerOptionsMw": [
-      10,
-      25,
-      50,
-      100
-    ],
-    "notes": "Rango de espectro publicado 550–960 MHz; 100 kHz step, 200 kHz RF bandwidth, 700 kHz channel spacing."
-  },
-  "custom": {
-    "name": "Dispositivo personalizado",
-    "kind": "Custom",
-    "candidateModel": "custom"
-  }
+
+  "sennheiser_ew100_g4_a1": { "name": "Sennheiser EW 100 G4 · Range A1", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 470.0, "max": 516.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range A1: 470–516 MHz · 25 kHz tuning · hasta 1680 frecuencias, 20 bancos de fábrica + 1 de usuario. Potencia RF fija en 30 mW (spec Sennheiser). Selectividad de canal adyacente típica ≥65 dB." },
+  "sennheiser_ew100_g4_a": { "name": "Sennheiser EW 100 G4 · Range A", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 516.0, "max": 558.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range A: 516–558 MHz · 25 kHz tuning · 30 mW fijo." },
+  "sennheiser_ew100_g4_as": { "name": "Sennheiser EW 100 G4 · Range AS", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 520.0, "max": 558.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range AS: 520–558 MHz · 25 kHz tuning · 30 mW fijo." },
+  "sennheiser_ew100_g4_g": { "name": "Sennheiser EW 100 G4 · Range G", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 566.0, "max": 608.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range G: 566–608 MHz · 25 kHz tuning · 30 mW fijo. El usuario puede seleccionar banco/canal por separado en el equipo." },
+  "sennheiser_ew100_g4_gb": { "name": "Sennheiser EW 100 G4 · Range GB", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 606.0, "max": 648.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range GB: 606–648 MHz · 25 kHz tuning · 30 mW fijo." },
+  "sennheiser_ew100_g4_b": { "name": "Sennheiser EW 100 G4 · Range B", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 626.0, "max": 668.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range B: 626–668 MHz · 25 kHz tuning · 30 mW fijo." },
+  "sennheiser_ew100_g4_c": { "name": "Sennheiser EW 100 G4 · Range C", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 734.0, "max": 776.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range C: 734–776 MHz · 25 kHz tuning · 30 mW fijo." },
+  "sennheiser_ew100_g4_d": { "name": "Sennheiser EW 100 G4 · Range D", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 780.0, "max": 822.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range D: 780–822 MHz · 25 kHz tuning · 30 mW fijo." },
+  "sennheiser_ew100_g4_e": { "name": "Sennheiser EW 100 G4 · Range E", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 823.0, "max": 865.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range E: 823–865 MHz · 25 kHz tuning · 30 mW fijo." },
+  "sennheiser_ew100_g4_th": { "name": "Sennheiser EW 100 G4 · Range TH", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 794.0, "max": 806.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range TH: 794–806 MHz (variante regional angosta) · 25 kHz tuning." },
+  "sennheiser_ew100_g4_jb": { "name": "Sennheiser EW 100 G4 · Range JB", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 806.0, "max": 810.0, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range JB: 806–810 MHz (variante regional muy angosta) · 25 kHz tuning." },
+  "sennheiser_ew100_g4_kplus": { "name": "Sennheiser EW 100 G4 · Range K+", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 925.0, "max": 937.5, "step": 0.025, "selectivityDb": 65, "powerOptionsMw": [30], "notes": "Range K+: 925–937.5 MHz · 25 kHz tuning." },
+
+  "sennheiser_ew100_g3_a": { "name": "Sennheiser EW 100 G3 · Range A", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 516.0, "max": 558.0, "step": 0.025, "powerOptionsMw": [30], "notes": "Range A: 516–558 MHz. G3 no tiene la misma ficha pública de selectividad de canal adyacente que G4, por eso no se carga ese dato acá (mejor omitirlo que inventarlo)." },
+  "sennheiser_ew100_g3_b": { "name": "Sennheiser EW 100 G3 · Range B", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 626.0, "max": 668.0, "step": 0.025, "powerOptionsMw": [30], "notes": "Range B: 626–668 MHz." },
+  "sennheiser_ew100_g3_c": { "name": "Sennheiser EW 100 G3 · Range C", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 734.0, "max": 776.0, "step": 0.025, "powerOptionsMw": [30], "notes": "Range C: 734–776 MHz." },
+  "sennheiser_ew100_g3_d": { "name": "Sennheiser EW 100 G3 · Range D", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 780.0, "max": 822.0, "step": 0.025, "powerOptionsMw": [30], "notes": "Range D: 780–822 MHz." },
+  "sennheiser_ew100_g3_e": { "name": "Sennheiser EW 100 G3 · Range E", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 823.0, "max": 865.0, "step": 0.025, "powerOptionsMw": [30], "notes": "Range E: 823–865 MHz." },
+  "sennheiser_ew100_g3_g": { "name": "Sennheiser EW 100 G3 · Range G", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 566.0, "max": 608.0, "step": 0.025, "powerOptionsMw": [30], "notes": "Range G: 566–608 MHz." },
+  "sennheiser_ew100_g3_gb": { "name": "Sennheiser EW 100 G3 · Range GB", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "verified", "min": 606.0, "max": 648.0, "step": 0.025, "powerOptionsMw": [30], "notes": "Range GB: 606–648 MHz." },
+
+  "sennheiser_ew100_g2_a": { "name": "Sennheiser EW 100 G2 · Range A (verificar)", "kind": "Analog wideband FM", "candidateModel": "continuous", "modulation": "analog", "confidence": "estimate", "min": 518.0, "max": 554.0, "step": 0.025, "powerOptionsMw": [30], "notes": "G2 (discontinuado) tiene 5 rangos de ~36 MHz con 1440 frecuencias c/u — a 25 kHz de paso da 36/0.025=1440, consistente con la ficha oficial. Pero solo se pudo confirmar con certeza este rango A (518–554 MHz); los otros 4 rangos de la serie G2 varían por variante/región y NO están cargados. Verificá la tabla impresa de tu equipo específico antes de usar este perfil en un rodaje real." },
+
+  "deity_theos": { "name": "Deity THEOS DBTX", "kind": "Digital UHF", "candidateModel": "continuous", "modulation": "digital", "confidence": "verified", "min": 550.0, "max": 960.0, "step": 0.1, "bandwidth": 0.2, "channelSpacing": 0.7, "powerOptionsMw": [10, 25, 50, 100], "notes": "Spec oficial Deity: paso 100 kHz, spacing recomendado entre transmisores 700 kHz (100 mW solo en USA/donde esté permitido). El ancho ocupado de 0.2 MHz se mantiene por continuidad con V1 como estimación de ingeniería, no es una cifra que Deity publique con ese nombre exacto. Deity promociona el sistema como \"intermod-free\" en el transmisor por su modulación digital de espectro angosto — igual se mantiene el cálculo de IM en modo conservador acá, porque esa afirmación es sobre el transmisor y no descarta intermodulación generada en el front-end de un receptor real ni en combinación con equipos analógicos del mismo rodaje." },
+  "saramonic_k9": { "name": "Saramonic K9", "kind": "Digital UHF", "candidateModel": "continuous", "modulation": "digital", "confidence": "verified", "min": 550.0, "max": 960.0, "step": 0.1, "bandwidth": 0.2, "channelSpacing": 0.7, "powerOptionsMw": [10, 25, 50, 100], "notes": "Rango de espectro publicado 550–960 MHz; 100 kHz step, 200 kHz RF bandwidth, 700 kHz channel spacing (confirmado independientemente). Igual que THEOS, es digital de espectro angosto — se mantiene el cálculo de IM conservador por la misma razón." },
+
+  "wisycom_mtp40s": { "name": "Wisycom MTP40S", "kind": "Analog wideband FM (subportadora digital)", "candidateModel": "continuous", "modulation": "analog", "confidence": "estimate", "min": 470.0, "max": 640.0, "step": 0.025, "powerOptionsMw": [10, 50, 100], "notes": "El MTP40S se vende en variantes de banda distintas (antenas AWF30 cubriendo tramos de ~90–130 MHz dentro de un macro-rango de fábrica). Acá se cargó el macro-rango de tuning más amplio documentado (470–640 MHz) como capacidad de hardware, no como el tramo específico de una unidad puntual. Paso estándar 25 kHz (existe variante de fábrica a 5 kHz bajo pedido). Es FM de banda ancha con subportadora digital de datos — no es un sistema 100% digital como THEOS/K9. Confirmá el rango exacto grabado en tu antena/unidad antes de coordinar un rodaje real con este perfil." },
+  "lectrosonics_dcht_duet": { "name": "Lectrosonics DCHT (Duet, versión doméstica)", "kind": "Digital UHF", "candidateModel": "continuous", "modulation": "digital", "confidence": "estimate", "min": 470.1, "max": 607.95, "step": 0.025, "powerOptionsMw": [10, 25, 50], "notes": "Versión doméstica/US: 470.100–607.950 MHz, 25 kHz de paso fino (también soporta 100 kHz grueso). Existen variantes internacionales con otro rango — E01 (470.100–614.375 MHz) y B1C1 (537–691 MHz internacional / 537–663 MHz Norteamérica) — que no están cargadas. Se eligió la variante doméstica como referencia por ser la más citada; si tu unidad es otra variante regional, avisá cuál para cargar el rango correcto." },
+
+  "rodelink_ii": { "name": "RØDE RØDELink II (pendiente de datasheet)", "kind": "UHF (heredado de Lectrosonics)", "candidateModel": "pending", "modulation": "digital", "confidence": "pending", "powerOptionsMw": [], "notes": "Anunciado en NAB 2026, construido sobre hardware UHF de Lectrosonics tras la adquisición por parte de RØDE. Al momento de esta actualización no hay rango de frecuencias, paso de sintonía ni channel spacing publicados oficialmente — ni siquiera en las fichas de los distribuidores que ya lo listan para pre-venta. Este perfil queda como marcador para no bloquear el resto de la app; no lo uses para coordinar un rodaje real todavía. En cuanto RØDE publique el datasheet técnico, avisame y cargo los datos reales." },
+
+  "custom": { "name": "Dispositivo personalizado", "kind": "Custom", "candidateModel": "custom", "confidence": "pending", "powerOptionsMw": [], "notes": "Perfil sin datos cargados todavía. Pensado para ingresar min/max/paso manualmente en una próxima etapa; por ahora no genera candidatos." }
 }
