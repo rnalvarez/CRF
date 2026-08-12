@@ -1,10 +1,73 @@
-JavaScript syntax check: FAIL
-/mnt/data/rf-coordinator/app.js:73
-    if(k===1){yield prefix.concat(total);return}
-                    ^^^^^^
+=== Validación V2 — corrida completa ===
 
-SyntaxError: Unexpected identifier 'prefix'
-[90m    at wrapSafe (node:internal/modules/cjs/loader:1662:18)[39m
-[90m    at checkSyntax (node:internal/main/check_syntax:78:3)[39m
+1) Sintaxis
+$ node --check app.js
+(sin salida = sin errores)
+Node.js v22.22.2
+PASS
 
-Node.js v22.16.0
+2) devices.json
+$ python3 -c "import json; d=json.load(open('data/devices.json')); print(len(d),'perfiles')"
+27 perfiles
+PASS
+
+3) Funciones puras nuevas (potencia, selectividad, descuento digital, parser de scan)
+- powerFactor(10)=0.500 · powerFactor(50)=1.000 · powerFactor(100)=1.414 · powerFactor(null)=1.000  -> OK
+- selectivityFactor sin dato=1.000 · 65dB=0.925 · 90dB=0.800  -> OK
+- vecino 100mW puntúa peor que vecino 10mW a igual distancia (84.8 vs 100.0)  -> OK
+- sobre un IM3 real: analógico=0.0 vs digital=49.4 (descuento reduce, no anula)  -> OK
+- selectividad G4 relaja la exigencia (100.0 vs 98.6 a igual distancia)  -> OK
+- parseScanText: 4/6 líneas reconocidas en texto con comas/espacios/tabs/comentarios/basura  -> OK
+PASS (6/6)
+
+4) Recorrido de los 27 perfiles contra el pipeline completo
+(generateCandidates -> intermods -> scoreCandidate, un candidato de prueba por perfil)
+perfiles OK: 25 · omitidos correctamente (pending/custom): 2 · con error: 0 · total: 27
+PASS
+
+5) Motor de búsqueda de conjuntos (etapa 6)
+- n=6 sobre THEOS 550-600MHz con 2 ocupadas previas: 6 frecuencias sin duplicados,
+  separaciones todas >= spacing recomendado, 380ms
+- n=1: no rompe (no hay pares mutuos que comparar)
+- n=12 sobre BOYA (96 canales totales): 12 frecuencias sin duplicados, 1136ms
+  (n grande + búsqueda conjunta es más lento que un ranking independiente a propósito;
+  esperable para N chico/mediano en uso real de rodaje)
+PASS
+
+6) End-to-end con jsdom (simulación real de navegador cargando index.html + app.js + devices.json)
+$ npm install jsdom && node e2e_test.js
+OK   - select de dispositivo poblado (27 perfiles)
+OK   - deviceInfo tiene contenido tras init()
+OK   - cargar ejemplo pobló 4 chips
+OK   - calcular con THEOS produjo resultados
+OK   - agregar con potencia/digital sumó un 5to chip
+OK   - el chip muestra la potencia
+OK   - quitar una frecuencia bajó a 4 chips
+OK   - importScan agregó solo la que supera el umbral (5 chips)
+OK   - scanStatus tiene texto
+OK   - deviceInfo muestra el flag de perfil pendiente
+OK   - calcular con perfil pendiente no rompe y avisa
+OK   - buscar conjunto de 5 produjo 5 resultados
+TODO OK (12/12)
+PASS
+
+=== Resultado global: PASS (sintaxis + 27 perfiles + 6 tests de lógica + 12 checks e2e) ===
+
+Nota: no se corrió un linter/formatter porque el proyecto nunca tuvo uno configurado;
+si RAM quiere sumar eslint más adelante es una etapa aparte, no forma parte de esta validación.
+
+=== Actualización: ayuda contextual en "4. Parámetros del análisis" ===
+
+- 4x <details class="help"> agregados (minSeparation, imThreshold, resultCount, strict).
+- Ninguno queda anidado dentro de un <label> (se verificó con querySelector +
+  closest('label') sobre el DOM real vía jsdom) — evita que tocar el ícono "i"
+  dispare además el foco/click del input asociado.
+- label[for=...] verificado contra los 3 inputs numéricos.
+- Textos verificados: los 2 bloques de "Valores recomendados" contienen las
+  3 y 2 franjas exactas provistas; el texto de "Modo estricto" menciona "1.6"
+  y "Zona crítica IM", consistente con la línea real del multiplicador en
+  app.js (score-=35*severity*orderWeight*(opts.strict?1.6:1)*...).
+- Re-corrida completa de node --check + los 12 checks e2e después de la
+  restructuración del HTML: TODO OK, sin regresiones.
+
+=== Resultado global final: PASS ===

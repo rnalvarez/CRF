@@ -1,0 +1,11 @@
+{
+  "name": "crf",
+  "private": true,
+  "description": "Coordinador de frecuencias UHF — sin backend, GitHub Pages. Este package.json es solo para el harness de pruebas (jsdom); la app en sí no tiene dependencias.",
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  },
+  "scripts": {
+    "test": "node --check app.js && node e2e_test.js"
+  }
+}

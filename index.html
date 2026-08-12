@@ -10,7 +10,7 @@
 <body>
 <header>
   <div class="wrap">
-    <div class="eyebrow">RF COORDINATOR · V1</div>
+    <div class="eyebrow">RF COORDINATOR · V2</div>
     <h1>Coordinador de frecuencias UHF</h1>
     <p class="subtitle">Calcula y ordena frecuencias candidatas a partir de equipos, rango de trabajo y frecuencias ya ocupadas.</p>
   </div>
@@ -30,13 +30,26 @@
     <h2>2. Frecuencias ya ocupadas</h2>
     <div class="row">
       <input id="occupiedFreq" type="number" step="0.001" placeholder="Ej. 566.200">
+      <input id="occupiedPower" type="number" step="1" min="0" placeholder="mW (opc.)" class="power-input">
+      <label class="check inline"><input id="occupiedDigital" type="checkbox"> digital</label>
       <button id="addFreq">Agregar</button>
     </div>
+    <p class="hint">Potencia y "digital" son opcionales: si los cargás, el motor pondera separación e IM según la potencia real y descuenta parte de la penalización IM cuando todo lo que contribuye a un producto es digital de espectro angosto.</p>
     <div id="occupiedList" class="chips"></div>
     <div class="preset">
       <button id="loadExample">Cargar ejemplo: 2 G4 + 2 BOYA</button>
       <button id="clearAll" class="secondary">Limpiar</button>
     </div>
+    <details class="scan-import">
+      <summary>Importar resultado de scan (pegar texto)</summary>
+      <p class="hint">Pegá líneas con frecuencia y nivel, cualquier separador (coma, espacio, tab, punto y coma). Ej: <code>566.200, -42</code>. Las líneas con nivel ≥ umbral se agregan como ocupadas. El formato es genérico — si tu escáner exporta distinto, decime el formato real y lo ajustamos.</p>
+      <textarea id="scanText" rows="5" placeholder="566.200, -42&#10;574.100  -38.5&#10;581.925;-55"></textarea>
+      <div class="row">
+        <label class="inline-label">Umbral (dBm)<input id="scanThreshold" type="number" step="1" value="-55"></label>
+        <button id="importScan" class="secondary">Importar</button>
+      </div>
+      <p id="scanStatus" class="hint"></p>
+    </details>
   </section>
 
   <section class="card">
@@ -51,11 +64,68 @@
   <section class="card">
     <h2>4. Parámetros del análisis</h2>
     <div class="form-grid">
-      <label>Distancia mínima deseada (MHz)<input id="minSeparation" type="number" step="0.001" value="0.8"></label>
-      <label>Zona crítica IM (MHz)<input id="imThreshold" type="number" step="0.001" value="0.5"></label>
-      <label>Máximo de resultados<input id="resultCount" type="number" min="5" max="100" value="20"></label>
+      <div class="field">
+        <div class="field-head">
+          <label for="minSeparation">Distancia mínima deseada (MHz)</label>
+          <details class="help">
+            <summary aria-label="Ayuda: Distancia mínima deseada">i</summary>
+            <div class="help-panel">
+              <p>Define el espacio libre mínimo entre una frecuencia ocupada y una candidata. Depende del ancho de banda (Bandwidth) de la señal y la selectividad del receptor.</p>
+              <p class="help-panel-title">Valores recomendados:</p>
+              <ul>
+                <li><strong>0.300 - 0.400 MHz:</strong> Eventos con equipos de alta gama (ej. Sennheiser G4, Wisycom).</li>
+                <li><strong>0.400 - 0.500 MHz:</strong> Estándar confiable para sistemas modernos.</li>
+                <li><strong>0.700 - 0.800 MHz:</strong> Muy conservador, ideal al mezclar equipos de entrada (ej. BOYA) con digitales.</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+        <input id="minSeparation" type="number" step="0.001" value="0.8">
+      </div>
+      <div class="field">
+        <div class="field-head">
+          <label for="imThreshold">Zona crítica IM (MHz)</label>
+          <details class="help">
+            <summary aria-label="Ayuda: Zona crítica IM">i</summary>
+            <div class="help-panel">
+              <p>Define el margen de tolerancia alrededor de un "fantasma" de intermodulación calculado matemáticamente. Absorbe la dispersión de la señal y la desviación (drift) de los equipos.</p>
+              <p class="help-panel-title">Valores recomendados:</p>
+              <ul>
+                <li><strong>0.200 - 0.250 MHz:</strong> Estándar de la industria, ideal para acomodar muchos canales en un espectro saturado.</li>
+                <li><strong>0.500 MHz:</strong> Extremadamente conservador, útil para pocos canales donde se prioriza el silencio absoluto.</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+        <input id="imThreshold" type="number" step="0.001" value="0.5">
+      </div>
+      <div class="field">
+        <div class="field-head">
+          <label for="resultCount">Máximo de resultados</label>
+          <details class="help">
+            <summary aria-label="Ayuda: Máximo de resultados">i</summary>
+            <div class="help-panel">
+              <p>Cuántos candidatos mostrar como máximo en el listado de Recomendaciones, ordenados de mayor a menor score. No afecta el cálculo interno, solo cuántos se muestran.</p>
+              <p class="help-panel-title">Valores recomendados:</p>
+              <ul>
+                <li><strong>10 - 20:</strong> Alcanza para elegir rápido en la mayoría de los rodajes.</li>
+                <li><strong>50 - 100:</strong> Para inspeccionar el panorama completo del rango o comparar muchas opciones antes de decidir.</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+        <input id="resultCount" type="number" min="5" max="100" value="20">
+      </div>
     </div>
-    <label class="check"><input id="strict" type="checkbox"> Modo estricto: penalizar fuertemente conflictos IM</label>
+    <div class="check-row">
+      <label class="check"><input id="strict" type="checkbox"> Modo estricto: penalizar fuertemente conflictos IM</label>
+      <details class="help">
+        <summary aria-label="Ayuda: Modo estricto">i</summary>
+        <div class="help-panel">
+          <p>Si se activa, multiplica por 1.6 la penalización a cualquier frecuencia candidata que caiga dentro de la Zona crítica IM, descartándola de las recomendaciones mucho más rápido.</p>
+        </div>
+      </details>
+    </div>
     <p class="hint">Estos valores son criterios configurables del coordinador, no límites universales de RF.</p>
   </section>
 
@@ -71,9 +141,23 @@
   </section>
 
   <section class="card wide">
-    <h2>Metodología V1</h2>
-    <p>El motor calcula productos de intermodulación de órdenes 2 a 5 a partir de las frecuencias conocidas y penaliza candidatos que caen cerca de portadoras ocupadas o de productos calculados. También considera el paso de sintonización y la potencia RF declarada cuando el perfil la proporciona.</p>
-    <p><strong>Importante:</strong> esta V1 es un coordinador matemático/heurístico. No modela todavía IP3, selectividad real del receptor, ganancia de antena, distancia entre TX/RX, aislamiento, potencia efectiva radiada ni el comportamiento específico de cada front-end. La recomendación debe validarse con un scan RF en la locación.</p>
+    <div class="section-head">
+      <div>
+        <h2>6. Buscar un conjunto de frecuencias simultáneas</h2>
+        <p class="hint">Elige N frecuencias que funcionen bien entre sí y con lo ya ocupado — no solo cada una por separado (motor voraz + una pasada de mejora local, no ranking independiente).</p>
+      </div>
+      <div class="row set-controls">
+        <label class="inline-label">Cantidad<input id="setCount" type="number" min="1" max="24" value="4"></label>
+        <button id="findSet">Buscar conjunto</button>
+      </div>
+    </div>
+    <div id="setResults"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>Metodología</h2>
+    <p>El motor calcula productos de intermodulación de órdenes 2 a 5 a partir de las frecuencias conocidas y penaliza candidatos que caen cerca de portadoras ocupadas o de productos calculados. Considera el paso de sintonización, la potencia RF declarada por vecino ocupado (más potencia exige más separación), la selectividad de canal adyacente del perfil cuando el fabricante la publica, y reduce (sin anular) la penalización IM cuando todos los aportantes de un producto son equipos digitales de espectro angosto.</p>
+    <p><strong>Importante:</strong> este coordinador es matemático/heurístico. No modela IP3, bloqueo del receptor, ganancia de antena, distancia real entre TX/RX, aislamiento entre antenas ni potencia efectiva radiada. Los perfiles marcados como "estimados" o "pendientes" dependen de la variante exacta del equipo o todavía no tienen datasheet público — confirmá contra tu unidad real. Ninguna recomendación acá reemplaza un scan RF en la locación ni determina legalidad/regulación.</p>
   </section>
 </main>
 <script src="app.js"></script>

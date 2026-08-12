@@ -16,6 +16,32 @@ Coordinador de frecuencias UHF estático para GitHub Pages.
 - Modo estricto.
 - Sin backend y sin dependencia de servicios externos.
 
+## V2 — próximas etapas de V1, resueltas
+
+**1. Perfiles completos EW100 G2/G3/G4, THEOS, K9, RØDELink II, Wisycom, Lectrosonics.**
+`data/devices.json` pasó de 5 a 27 perfiles. Cada uno tiene un campo `confidence`:
+- `verified`: dato de spec oficial del fabricante o fuente independiente que coincide (BOYA, los 12 rangos de G4, los 7 rangos de G3 con datos confirmados, THEOS, K9).
+- `estimate`: dato razonable pero dependiente de variante/región que hay que confirmar contra el equipo real (G2 — solo el rango A confirmado con certeza —, Wisycom MTP40S, Lectrosonics DCHT/Duet versión doméstica).
+- `pending`: sin datos RF públicos todavía. **RØDELink II** quedó así a propósito: ni RØDE ni los distribuidores que ya lo listan para pre-venta publican rango/paso/spacing a la fecha de esta actualización. El perfil existe como marcador, no genera candidatos, y la UI lo avisa explícitamente en vez de fallar en silencio.
+
+**2. Bancos/canales oficiales.** Incorporado donde existen (BOYA por banco/canal; Sennheiser por rango con paso de 25 kHz confirmado contra la ficha de producto oficial).
+
+**3. Potencia como variable de ponderación física.** Cada frecuencia ocupada puede llevar una potencia (mW) opcional. El motor exige más separación de un vecino de mayor potencia (heurística `√(mW/50)`, acotada entre 0.5× y 2×) y pondera la severidad de un producto de IM según la potencia combinada de lo que lo generó. Sigue siendo una heurística, no una simulación de propagación real — así se documenta en la UI.
+
+**4. Ancho de canal, selectividad, bloqueo e IM del fabricante.** Se agregó el campo `selectivityDb` y se usa para relajar levemente la separación/umbral IM exigidos cuando el perfil lo declara (hoy solo Sennheiser G4, con la selectividad de canal adyacente ≥65 dB publicada por Sennheiser). Blocking dynamic range e IM rejection de fabricante quedan **sin poblar**: no se encontraron cifras públicas confiables para el resto de los perfiles, y se prefirió dejar el campo vacío antes que inventar un número. El motor cae de forma segura al comportamiento default cuando el dato no está.
+
+**5. Importación de resultados de scan.** Sección colapsable en "Frecuencias ya ocupadas": se pega texto con líneas de frecuencia + nivel (separador libre: coma, espacio, tab, punto y coma), se define un umbral en dBm, y lo que supera el umbral se agrega como ocupada. El formato de parseo es genérico porque no se definió el export real de ningún analizador puntual — avisar el formato real del equipo para afinarlo.
+
+**6. Motor de coordinación mejorado + búsqueda global de conjuntos.** Nueva sección "Buscar un conjunto de N frecuencias simultáneas": elige candidatos de a uno sumándolos al set de trabajo antes de elegir el siguiente (no ranking independiente), y después hace una pasada de mejora local (swap) buscando alternativas mejores para cada elección ya hecha, evaluada contra el resto del conjunto. Con N grande (10+) sobre un dispositivo de barrido continuo el cálculo puede tardar hasta 1–2 segundos; es una compensación esperada por hacer una búsqueda conjunta en vez de una independiente.
+
+También se corrigió que los sistemas **digitales de espectro angosto** (THEOS, K9) pesan menos en la penalización IM cuando todo lo que contribuye a un producto es digital (descuento del 50%, no eliminación — la afirmación de "intermod-free" de Deity es sobre el transmisor, no garantiza ausencia de IM en un receptor real ni en un rodaje mixto con equipos analógicos).
+
+También se agregó ayuda contextual (`<details>/<summary>`, sin JS extra) en "4. Parámetros del análisis": un ícono "i" junto a cada campo explica qué hace y sugiere valores según el equipo. Se eligió `<details>` sobre un tooltip por hover porque el contenido es largo y hover no funciona en touch (uso típico en tablet/celular durante un rodaje).
+
+### Cómo probarlo
+
+`npm install jsdom` (solo dev, no lo usa la app en producción) y después `npm test` corre `node --check` sobre `app.js` y una prueba end-to-end (`e2e_test.js`) que simula un navegador con jsdom: carga los 27 perfiles, agrega/quita frecuencias ocupadas, importa un scan, calcula recomendaciones, prueba un perfil `pending` y busca un conjunto de N frecuencias.
+
 ## BOYA
 
 El perfil utiliza los datos de trabajo proporcionados para el proyecto:
@@ -30,15 +56,14 @@ Por tanto, por ejemplo:
 
 ## Limitaciones importantes
 
-Esta V1 NO es un simulador RF completo. El cálculo de IM es una pantalla matemática conservadora y todavía no modela IP3, selectividad de receptor, bloqueo, ganancia/pérdida de antena, distancia, aislamiento entre antenas, potencia efectiva radiada ni características específicas de cada front-end.
+Este coordinador NO es un simulador RF completo. El cálculo de IM es una pantalla matemática conservadora. Sigue sin modelar IP3, bloqueo real del receptor, ganancia/pérdida de antena, distancia TX/RX, aislamiento entre antenas ni potencia efectiva radiada — la potencia declarada (V2) pondera el heurístico, pero no reemplaza esos modelos físicos.
 
-La herramienta no determina legalidad/regulación y no reemplaza un escaneo RF en la locación.
+La herramienta no determina legalidad/regulación y no reemplaza un escaneo RF en la locación. Los perfiles `estimate`/`pending` necesitan confirmación contra el equipo real antes de usarse para coordinar un rodaje.
 
-## Próximas etapas
+## Próximas etapas (post-V2)
 
-1. Añadir perfiles completos de EW100 G2/G3/G4, THEOS, K9, RØDELink II, Wisycom y Lectrosonics.
-2. Añadir bancos/canales oficiales donde existan.
-3. Incorporar potencia como variable de ponderación física, no solamente como dato.
-4. Añadir ancho de canal, selectividad, bloqueo e intermodulación especificados por fabricante.
-5. Añadir importación de resultados de scan.
-6. Mejorar el motor de coordinación incremental y la búsqueda global de conjuntos de frecuencias.
+1. Confirmar los 4 rangos restantes de EW100 G2 y la variante exacta de Wisycom/Lectrosonics que RAM usa en kit propio.
+2. Cargar RØDELink II en cuanto RØDE publique datasheet técnico.
+3. Sumar blocking dynamic range e IM rejection de fabricante donde se consiga (hoy solo hay selectividad de canal adyacente de Sennheiser G4).
+4. UI para cargar un perfil "personalizado" con min/max/paso manuales (hoy el perfil existe en `devices.json` pero no tiene formulario).
+5. Definir el formato real de export de scan del analizador que se use en campo y ajustar el parser a eso en vez del formato genérico actual.
