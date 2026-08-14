@@ -77,6 +77,21 @@ async function main() {
   check("buscar conjunto de 5 produjo 5 resultados", doc.getElementById("setResults").querySelectorAll(".result").length === 5);
   console.log("   tiempo búsqueda de conjunto (n=5):", (t1 - t0) + "ms");
 
+  // Diagnóstico de auto-conflicto: 4 canales BOYA en progresión aritmética
+  // (cada uno a 4 pasos del siguiente) generan fantasmas IM3/IM4/IM5 exactos
+  // sobre sí mismos. Caso real reportado y verificado en el chat con RAM.
+  doc.getElementById("clearAll").onclick();
+  doc.getElementById("deviceSelect").value = "boya_wm8_pro_k2";
+  for (const f of [556.710, 558.350, 559.990, 561.630]) {
+    doc.getElementById("occupiedFreq").value = String(f);
+    doc.getElementById("addFreq").onclick();
+  }
+  check("4 mics en progresión aritmética disparan el diagnóstico de auto-conflicto", doc.getElementById("selfConflicts").innerHTML.includes("conflicto"));
+  check("detecta las 9 coincidencias no-degeneradas (IM3+IM4+IM5 sobre las 4)", doc.querySelectorAll(".conflict-item").length === 9);
+  doc.getElementById("clearAll").onclick();
+  doc.getElementById("loadExample").onclick();
+  check("el set por defecto (sin progresión aritmética) no genera falsos positivos", doc.getElementById("selfConflicts").innerHTML.includes("conflict-ok"));
+
   console.log("\n=== RESULTADOS E2E ===");
   let allOk = true;
   for (const r of results) {

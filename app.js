@@ -50,12 +50,62 @@ function addOccupied(){
   $("occupiedFreq").value="";$("occupiedPower").value="";$("occupiedDigital").checked=false;
   renderOccupied(); calculate();
 }
+/* ¿El propio set de ocupadas genera fantasmas IM que caen sobre OTRA ocupada del
+   mismo set? A diferencia de intermods()+scoreCandidate() (que evalúan candidatos
+   nuevos contra lo ya ocupado), esto compara lo ocupado contra sí mismo. Reusa
+   exactamente la misma ponderación (orden, potencia, descuento digital, selectividad,
+   modo estricto) que scoreCandidate para que el criterio de "qué tan grave" sea
+   consistente en toda la app. */
+function analyzeSelfConflicts(occupied,opts,device){
+  if(occupied.length<2)return [];
+  const allIm=intermods(occupied,5);
+  const selFactor=selectivityFactor(device);
+  const threshold=opts.imThreshold*selFactor;
+  const hits=[];
+  for(const p of allIm){
+    for(let i=0;i<occupied.length;i++){
+      if(p.coeffs[i]!==0)continue; // esta ocupada ya es generadora de este producto, no es una víctima distinta
+      const o=occupied[i];
+      const dist=Math.abs(p.freq-o.freq);
+      if(dist<=threshold){
+        const severity=(threshold-dist)/Math.max(threshold,1e-9);
+        const orderWeight=p.order===3?1.6:p.order===2?1.2:(p.order===4?0.8:0.5);
+        const digitalDiscount=p.allDigital?0.5:1;
+        const risk=severity*orderWeight*(opts.strict?1.6:1)*digitalDiscount*p.powerWeight;
+        const generators=p.coeffs.map((c,j)=>c!==0?{freq:occupied[j].freq,coef:c}:null).filter(Boolean);
+        hits.push({victim:o,order:p.order,dist,risk,generators});
+      }
+    }
+  }
+  hits.sort((a,b)=>b.risk-a.risk);
+  return hits;
+}
+
+function renderSelfConflicts(){
+  const box=$("selfConflicts");
+  if(!box)return;
+  if(state.occupied.length<2){box.innerHTML="";return}
+  const opts={imThreshold:parseFloat($("imThreshold").value)||0.5,strict:$("strict").checked};
+  const device=state.devices[$("deviceSelect").value];
+  const hits=analyzeSelfConflicts(state.occupied,opts,device);
+  if(!hits.length){
+    box.innerHTML=`<p class="conflict-ok">✓ Sin conflictos de IM detectados entre las frecuencias ocupadas (orden 2–5, dentro de ${fmt(opts.imThreshold)} MHz).</p>`;
+    return;
+  }
+  box.innerHTML=`<p class="conflict-warn-title">⚠ ${hits.length} conflicto(s) de IM dentro del propio set de ocupadas:</p>` +
+    hits.map(h=>{
+      const gens=h.generators.map(g=>`${g.coef>0?"+":""}${g.coef}×${fmt(g.freq)}`).join(" ");
+      return `<div class="conflict-item"><b>${fmt(h.victim.freq)} MHz</b> tiene un fantasma IM${h.order} a ${fmt(h.dist)} MHz, generado por ${gens} MHz.</div>`;
+    }).join("");
+}
+
 function renderOccupied(){
   $("occupiedList").innerHTML=state.occupied.map((o,i)=>{
     const tags=[o.powerMw?`${o.powerMw}mW`:null,o.digital?"digital":null,o.source==="scan"?"scan":null].filter(Boolean).join(" · ");
     return `<span class="chip${o.source==="scan"?" chip-scan":""}">${fmt(o.freq)} MHz${tags?` <small>(${tags})</small>`:""} <button title="Eliminar" onclick="removeFreq(${i})">×</button></span>`;
   }).join("");
   $("status").textContent=state.occupied.length?`${state.occupied.length} frecuencia(s) ocupada(s).`:"Agregá al menos una frecuencia ocupada.";
+  renderSelfConflicts();
 }
 function removeFreq(i){state.occupied.splice(i,1);renderOccupied();calculate()}
 
@@ -187,6 +237,7 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device){
 function calculate(){
   const min=parseFloat($("rangeMin").value),max=parseFloat($("rangeMax").value);
   const opts={minSep:parseFloat($("minSeparation").value),imThreshold:parseFloat($("imThreshold").value),strict:$("strict").checked};
+  renderSelfConflicts();
   if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min){$("results").innerHTML="<p class='bad-text'>Rango inválido.</p>";return}
   if(!state.occupied.length){$("results").innerHTML="<p class='hint'>Cargá al menos una frecuencia ocupada para generar recomendaciones.</p>";return}
   const d=state.devices[$("deviceSelect").value];

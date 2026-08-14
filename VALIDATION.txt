@@ -71,3 +71,20 @@ si RAM quiere sumar eslint más adelante es una etapa aparte, no forma parte de 
   restructuración del HTML: TODO OK, sin regresiones.
 
 === Resultado global final: PASS ===
+
+=== Actualización: diagnóstico de auto-conflicto entre ocupadas ===
+
+- analyzeSelfConflicts(occupied,opts,device): probado aislado con los 4 mics
+  BOYA en progresión aritmética (556.710/558.350/559.990/561.630) -> 9 conflictos
+  no-degenerados (IM3+IM4+IM5, cada uno a 0.000 MHz). El set por defecto
+  (2 G4 + 2 BOYA) -> 0 conflictos, confirma que no hay falsos positivos.
+- Casos borde 0 y 1 ocupadas: no rompe, devuelve [].
+- Modo estricto multiplica el risk score x1.6 (1.60 -> 2.56), consistente con
+  el mismo multiplicador que ya usa scoreCandidate.
+- e2e (jsdom) ampliado a 15 checks: renderSelfConflicts se dispara solo al
+  agregar/quitar/limpiar ocupadas via la UI real, muestra el aviso correcto
+  en cada caso, y el set por defecto sigue sin falsos positivos end-to-end.
+- Re-corrida completa: node --check + 15/15 e2e -> TODO OK, sin regresiones
+  sobre lo entregado anteriormente.
+
+=== Resultado global final: PASS (15/15 e2e) ===

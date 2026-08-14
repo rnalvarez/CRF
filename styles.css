@@ -71,3 +71,11 @@ details.help[open] summary{background:#111827;color:#fff}
   .field-head{flex-wrap:wrap}
   .check-row{justify-content:space-between}
 }
+
+/* --- Diagnóstico: fantasmas IM entre las propias frecuencias ocupadas --- */
+.self-conflicts{margin-top:10px}
+.conflict-ok{margin:0;font-size:13px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:8px 12px}
+.conflict-warn-title{margin:0 0 6px;font-size:13px;font-weight:700;color:#991b1b}
+.conflict-item{font-size:12.5px;line-height:1.5;color:#7f1d1d;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:7px 11px;margin-bottom:6px}
+.conflict-item:last-child{margin-bottom:0}
+.conflict-item b{color:#450a0a}
