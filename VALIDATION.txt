@@ -88,3 +88,51 @@ si RAM quiere sumar eslint más adelante es una etapa aparte, no forma parte de 
   sobre lo entregado anteriormente.
 
 === Resultado global final: PASS (15/15 e2e) ===
+
+=== Actualización: clasificación de 4 niveles + fix de un bug real de unidades ===
+
+Documento formal recibido reportando: candidato 561.220 MHz marcado sin
+conflictos que, al agregarse, generaba 2 fantasmas IM5 a 20kHz de 574.200
+y 584.180 MHz. Investigación:
+
+1) Frecuencias "556.200/556.990" del reporte no existen en ningún archivo
+   del repo (grep -rn confirmó 0 coincidencias) — las reales son 566.200/
+   559.990, confirmadas contra loadExample() en app.js línea por línea.
+   Sin bug de offset/conversión: era una transcripción del propio reporte.
+2) Verificado matemáticamente: 2×561.220-2×566.200+584.180=574.220 (dist
+   0.020 de 574.200); -2×561.220+2×566.200+574.200=584.160 (dist 0.020 de
+   584.180). Coincide exacto con lo reportado.
+3) Causa raíz confirmada: scoreCandidate() puntuaba contra allIm calculado
+   SOLO de las ocupadas previas al candidato — no existía chequeo de si
+   agregar el candidato formaría un fantasma nuevo sobre otra ocupada.
+   Ya se había implementado precomputeDangerZones() para esto en el chat;
+   esta ronda le sumó clasificación de 4 niveles en vez de un score único.
+
+BUG encontrado y corregido durante la implementación: al clasificar hits de
+dangerZones con coeficiente de candidato |mc|>=2, se comparaba la distancia
+candidato-a-centro (sin escalar) contra el umbral crítico, subestimando la
+distancia real del producto en un factor de mc. Con mc=2, 20kHz reales se
+leían como 10kHz -> clasificaba CRÍTICO en vez de ADVERTENCIA. Corregido
+escalando por mcAbs antes de clasificar. Test: 561.220 -> ADVERTENCIA
+(antes del fix daba CRÍTICO; antes de dangerZones daba RECOMENDADO/100).
+
+Segundo ajuste: el límite exterior de classifyConflict (inicialmente
+umbral×2.5) hacía que el 100% de los candidatos BOYA cayeran en REVISAR o
+peor -> 0% RECOMENDADO. Se acotó al mismo "Zona crítica IM" ya configurado
+por el usuario -> 11.7% RECOMENDADO (11/94), consistente con que ~71% de
+los "100/100" originales ya se sabía que escondían auto-conflictos.
+
+Performance: precomputeDangerZones() explota combinatorialmente con el
+set ocupado (880 zonas en m=4 -> 69820 en m=10), sobre todo por el orden 5
+(~65% de las zonas a m=5 son solo de ese orden). calculateSet() lo usa en
+un loop ~3n veces con un set creciente -> se acotó a maxOrder=4 ahí
+específicamente (calculate(), un candidato por vez, mantiene 5 completo).
+findSet(n=5) sobre THEOS arrancando con 5 ocupadas: 6.2s -> 4.5s. Sigue
+siendo el caso más lento del sistema (dispositivo continuo más ancho +
+n grande + set inicial ya grande); casos típicos (BOYA, n menor, menos
+ocupadas) son sub-segundo.
+
+e2e (jsdom) ampliado a 18 checks, incluyendo el caso exacto del documento
+como regresión permanente. TODO OK.
+
+=== Resultado global final: PASS (18/18 e2e, bug de unidades corregido y confirmado) ===

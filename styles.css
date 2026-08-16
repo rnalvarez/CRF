@@ -79,3 +79,9 @@ details.help[open] summary{background:#111827;color:#fff}
 .conflict-item{font-size:12.5px;line-height:1.5;color:#7f1d1d;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:7px 11px;margin-bottom:6px}
 .conflict-item:last-child{margin-bottom:0}
 .conflict-item b{color:#450a0a}
+
+/* --- Tabla de detalle IM (víctima/orden/producto/distancia/nivel) --- */
+.im-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+.im-table th{text-align:left;font-weight:600;color:#6b7280;padding:4px 8px;border-bottom:1px solid #e5e7eb}
+.im-table td{padding:4px 8px;border-bottom:1px solid #f3f4f6;font-variant-numeric:tabular-nums}
+.im-table tr:last-child td{border-bottom:none}

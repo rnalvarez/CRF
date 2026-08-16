@@ -92,6 +92,25 @@ async function main() {
   doc.getElementById("loadExample").onclick();
   check("el set por defecto (sin progresión aritmética) no genera falsos positivos", doc.getElementById("selfConflicts").innerHTML.includes("conflict-ok"));
 
+  // Caso reportado en un documento formal: candidato "sin conflictos" que al agregarse
+  // genera 2 fantasmas IM5 a 20kHz reales. Debe clasificar ADVERTENCIA (no CRÍTICO por
+  // el bug de unidades candidato-espacio-vs-producto-espacio que hubo, ni RECOMENDADO
+  // por el gap original que motivó dangerZones).
+  doc.getElementById("clearAll").onclick();
+  doc.getElementById("deviceSelect").value = "boya_wm8_pro_k2";
+  for (const f of [566.200, 574.200, 559.990, 584.180]) {
+    doc.getElementById("occupiedFreq").value = String(f);
+    doc.getElementById("addFreq").onclick();
+  }
+  doc.getElementById("calculate").onclick();
+  const preHtml = doc.getElementById("selfConflicts").innerHTML;
+  check("las 4 originales (2 G4 + 2 BOYA) siguen sin auto-conflicto", preHtml.includes("conflict-ok"));
+  doc.getElementById("occupiedFreq").value = "561.220";
+  doc.getElementById("addFreq").onclick();
+  const postHtml = doc.getElementById("selfConflicts").innerHTML;
+  check("agregar 561.220 dispara el diagnóstico (2 fantasmas IM5 reales)", postHtml.includes("IM5") && (postHtml.match(/conflict-item/g) || []).length === 2);
+  check("el texto del diagnóstico no dice CRÍTICO para este caso (20kHz reales = ADVERTENCIA)", postHtml.includes("ADVERTENCIA") && !postHtml.includes("CRÍTICO"));
+
   console.log("\n=== RESULTADOS E2E ===");
   let allOk = true;
   for (const r of results) {

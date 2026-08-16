@@ -61,6 +61,7 @@ function analyzeSelfConflicts(occupied,opts,device){
   const allIm=intermods(occupied,5);
   const selFactor=selectivityFactor(device);
   const threshold=opts.imThreshold*selFactor;
+  const criticalFloor=Number.isFinite(opts.criticalFloor)?opts.criticalFloor:0.010;
   const hits=[];
   for(const p of allIm){
     for(let i=0;i<occupied.length;i++){
@@ -68,16 +69,16 @@ function analyzeSelfConflicts(occupied,opts,device){
       const o=occupied[i];
       const dist=Math.abs(p.freq-o.freq);
       if(dist<=threshold){
-        const severity=(threshold-dist)/Math.max(threshold,1e-9);
-        const orderWeight=p.order===3?1.6:p.order===2?1.2:(p.order===4?0.8:0.5);
+        const {tier,riskScore}=classifyConflict(dist,p.order,threshold,opts.strict,criticalFloor);
+        if(tier==="recomendado")continue;
         const digitalDiscount=p.allDigital?0.5:1;
-        const risk=severity*orderWeight*(opts.strict?1.6:1)*digitalDiscount*p.powerWeight;
+        const risk=riskScore*digitalDiscount*p.powerWeight;
         const generators=p.coeffs.map((c,j)=>c!==0?{freq:occupied[j].freq,coef:c}:null).filter(Boolean);
-        hits.push({victim:o,order:p.order,dist,risk,generators});
+        hits.push({victim:o,order:p.order,dist,risk,tier,generators});
       }
     }
   }
-  hits.sort((a,b)=>b.risk-a.risk);
+  hits.sort((a,b)=>TIER_RANK[b.tier]-TIER_RANK[a.tier]||b.risk-a.risk);
   return hits;
 }
 
@@ -85,7 +86,7 @@ function renderSelfConflicts(){
   const box=$("selfConflicts");
   if(!box)return;
   if(state.occupied.length<2){box.innerHTML="";return}
-  const opts={imThreshold:parseFloat($("imThreshold").value)||0.5,strict:$("strict").checked};
+  const opts={imThreshold:parseFloat($("imThreshold").value)||0.5,strict:$("strict").checked,criticalFloor:parseFloat($("criticalFloor")?.value)||0.010};
   const device=state.devices[$("deviceSelect").value];
   const hits=analyzeSelfConflicts(state.occupied,opts,device);
   if(!hits.length){
@@ -95,7 +96,7 @@ function renderSelfConflicts(){
   box.innerHTML=`<p class="conflict-warn-title">⚠ ${hits.length} conflicto(s) de IM dentro del propio set de ocupadas:</p>` +
     hits.map(h=>{
       const gens=h.generators.map(g=>`${g.coef>0?"+":""}${g.coef}×${fmt(g.freq)}`).join(" ");
-      return `<div class="conflict-item"><b>${fmt(h.victim.freq)} MHz</b> tiene un fantasma IM${h.order} a ${fmt(h.dist)} MHz, generado por ${gens} MHz.</div>`;
+      return `<div class="conflict-item"><b>${TIER_LABEL[h.tier]}</b> · <b>${fmt(h.victim.freq)} MHz</b> tiene un fantasma IM${h.order} a ${fmt(h.dist)} MHz, generado por ${gens} MHz.</div>`;
     }).join("");
 }
 
@@ -191,7 +192,79 @@ function intermods(occupied,maxOrder=5){
   return products;
 }
 
-function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device){
+/* Un candidato puede no caer cerca de ningún fantasma de los YA ocupados, y aun así,
+   una vez agregado, combinarse con 2+ de esas ocupadas para generar un fantasma NUEVO
+   que caiga sobre OTRA ocupada distinta (el caso "561.220 se agrega limpio, pero crea
+   un IM5 sobre 574.200/584.180" reportado en el chat). scoreCandidate() no lo veía
+   porque allIm se calcula ANTES de agregar el candidato.
+   Precomputar esto una vez por corrida (no una vez por candidato) evita reintroducir
+   el mismo problema de performance que se corrigió al mover intermods() fuera del loop
+   de candidatos: para cada ocupada-víctima, se enumeran combinaciones de coeficientes
+   sobre las OTRAS ocupadas dejando lugar para un coeficiente futuro del candidato, y de
+   ahí se despeja qué frecuencia de candidato completaría ese fantasma exacto. El resultado
+   es una lista chica de "zonas peligrosas" (centro + orden) contra la que cada candidato
+   se compara con una resta, no con un intermods() entero. */
+function precomputeDangerZones(occupied,maxOrder=5){
+  const zones=[];
+  for(let vi=0;vi<occupied.length;vi++){
+    const victim=occupied[vi];
+    const others=occupied.filter((_,i)=>i!==vi);
+    const m=others.length;
+    function rec(i,coeffs,sumAbs){
+      if(i===m){
+        if(sumAbs===0)return; // sin al menos 1 ocupada "otra" participando, es solo la armónica propia del candidato, no intermodulación
+        const partial=others.reduce((s,o,j)=>s+coeffs[j]*o.freq,0);
+        const contributors=coeffs.map((c,j)=>c!==0?{freq:others[j].freq,coef:c}:null).filter(Boolean);
+        for(let mc=-maxOrder;mc<=maxOrder;mc++){
+          if(mc===0)continue;
+          const totalOrder=sumAbs+Math.abs(mc);
+          if(totalOrder<2||totalOrder>maxOrder)continue;
+          const center=(victim.freq-partial)/mc;
+          if(!Number.isFinite(center)||center<=0)continue;
+          zones.push({center,mcAbs:Math.abs(mc),order:totalOrder,victimFreq:victim.freq,contributors});
+        }
+        return;
+      }
+      for(let c=-maxOrder;c<=maxOrder;c++){
+        const s=sumAbs+Math.abs(c);
+        if(s<maxOrder)rec(i+1,coeffs.concat(c),s);
+      }
+    }
+    rec(0,[],0);
+  }
+  zones.sort((a,b)=>a.center-b.center); // ordenado para poder acotar la búsqueda por candidato con binary search
+  return zones;
+}
+
+function lowerBound(sortedZones,target){
+  let lo=0,hi=sortedZones.length;
+  while(lo<hi){
+    const mid=(lo+hi)>>1;
+    if(sortedZones[mid].center<target)lo=mid+1;else hi=mid;
+  }
+  return lo;
+}
+
+const TIER_RANK={recomendado:0,revisar:1,advertencia:2,critico:3};
+const TIER_LABEL={recomendado:"🟢 RECOMENDADO",revisar:"🟡 REVISAR",advertencia:"🟠 ADVERTENCIA",critico:"🔴 CRÍTICO"};
+
+/* Clasificación en 4 niveles en vez de un simple sí/no. Dos condiciones para "crítico",
+   a propósito, porque un producto exactamente encima (o a muy pocos kHz) es grave sin
+   importar el orden — un IM5 a 0 kHz es tan crítico como un IM3 a 0 kHz — pero a distancias
+   moderadas SÍ debe importar el orden: no todo IM5 es un IM3. riskScore combina ambas cosas;
+   criticalFloorMHz es la distancia absoluta por debajo de la cual no importa el orden.
+   Configurable desde la UI (umbral crítico) y desde "Zona crítica IM"/"Modo estricto". */
+function classifyConflict(distanceMHz,order,effImThreshold,strict,criticalFloorMHz){
+  if(distanceMHz>=effImThreshold)return {tier:"recomendado",riskScore:0};
+  const orderWeight=order===3?1.6:order===2?1.2:(order===4?0.8:0.5);
+  const severity=(effImThreshold-distanceMHz)/effImThreshold;
+  const riskScore=severity*orderWeight*(strict?1.6:1);
+  if(distanceMHz<=criticalFloorMHz||riskScore>=1.0)return {tier:"critico",riskScore};
+  if(riskScore>=0.35)return {tier:"advertencia",riskScore};
+  return {tier:"revisar",riskScore};
+}
+
+function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,dangerZones){
   const selFactor=selectivityFactor(device);
   const effMinSep=opts.minSep*selFactor;
   const effImThreshold=opts.imThreshold*selFactor;
@@ -214,29 +287,78 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device){
     reasons.push(`separación mínima ${fmt(worstSep)} MHz`);
   }else score+=Math.min(10,worstSep);
 
+  const criticalFloor=Number.isFinite(opts.criticalFloor)?opts.criticalFloor:0.010;
+  const hits=[]; // {victim, order, product, dist, source:'existente'|'nuevo', tier, riskScore}
+
   let nearestIM=Infinity, nearestIMOrder=null;
   for(const p of allIm){
     const dist=Math.abs(cand.freq-p.freq);
     if(dist<nearestIM){nearestIM=dist;nearestIMOrder=p.order}
     if(dist<effImThreshold){
-      const severity=(effImThreshold-dist)/effImThreshold;
-      const orderWeight=p.order===3?1.6:p.order===2?1.2:(p.order===4?0.8:0.5);
-      const digitalDiscount=p.allDigital?0.5:1; // sistemas digitales de espectro angosto: penalización reducida, no anulada
-      score-=35*severity*orderWeight*(opts.strict?1.6:1)*digitalDiscount*p.powerWeight;
+      const {tier,riskScore}=classifyConflict(dist,p.order,effImThreshold,opts.strict,criticalFloor);
+      const digitalDiscount=p.allDigital?0.5:1;
+      const weighted=riskScore*digitalDiscount*p.powerWeight;
+      if(tier!=="recomendado")score-=35*weighted;
+      hits.push({victim:cand.freq,order:p.order,product:p.freq,dist,source:"existente",tier,riskScore:weighted});
     }
   }
   if(nearestIM<effImThreshold)reasons.push(`IM${nearestIMOrder} a ${fmt(nearestIM)} MHz`);
+
+  // ¿Agregar ESTE candidato formaría un fantasma IM nuevo sobre OTRA ocupada?
+  // (allIm de arriba solo mira los fantasmas que YA existen antes de agregarlo)
+  let worstZone=null, worstZoneDist=Infinity;
+  if(dangerZones&&dangerZones.length){
+    // mcAbs>=1 siempre, así que ningún threshold de zona puede superar effImThreshold (mcAbs=1 es el caso más ancho):
+    // acotamos la búsqueda a esa ventana con binary search en vez de recorrer las decenas de miles de zonas posibles.
+    const lo=lowerBound(dangerZones,cand.freq-effImThreshold);
+    for(let zi=lo;zi<dangerZones.length;zi++){
+      const z=dangerZones[zi];
+      if(z.center>cand.freq+effImThreshold)break; // zones está ordenado por center: ya no hay más candidatas posibles
+      const zoneThreshold=effImThreshold/z.mcAbs;
+      const dist=Math.abs(cand.freq-z.center); // distancia en espacio candidato (para el binary search y el bar de arriba)
+      const productDist=dist*z.mcAbs; // distancia REAL del producto IM a la víctima, en MHz — la que hay que clasificar
+      if(dist<zoneThreshold){
+        // severidad: matemáticamente (zoneThreshold-dist)/zoneThreshold === (effImThreshold-productDist)/effImThreshold,
+        // así que se puede pasar cualquiera de los dos pares consistentes; el piso crítico en cambio SÍ necesita
+        // la distancia real del producto (no la del candidato sin escalar), o con mcAbs>=2 se subestima a la mitad o menos.
+        const {tier,riskScore}=classifyConflict(productDist,z.order,effImThreshold,opts.strict,criticalFloor);
+        if(tier!=="recomendado")score-=30*riskScore;
+        if(dist<worstZoneDist){worstZoneDist=dist;worstZone=z}
+        hits.push({victim:z.victimFreq,order:z.order,product:cand.freq /* aprox: el candidato ES uno de los generadores */,dist:productDist,source:"nuevo",tier,riskScore});
+      }
+    }
+  }
+  if(worstZone)reasons.push(`si se agrega, IM${worstZone.order} nuevo sobre ${fmt(worstZone.victimFreq)} MHz`);
+
+  // Nivel general del candidato: el peor tier entre todos los hits relevantes.
+  let overallTier="recomendado";
+  for(const h of hits)if(TIER_RANK[h.tier]>TIER_RANK[overallTier])overallTier=h.tier;
+  const orderCounts={3:0,4:0,5:0};
+  hits.forEach(h=>{if(h.tier!=="recomendado"&&orderCounts[h.order]!==undefined)orderCounts[h.order]++});
+
+  // La separación mínima es un problema aparte de la clasificación IM, pero si es grave
+  // también debe empujar el nivel general — no tiene sentido "RECOMENDADO" pegado al vecino.
+  const sepTier=worstRatio>=0.6?"critico":worstRatio>=0.2?"advertencia":worstRatio>0?"revisar":"recomendado";
+  if(TIER_RANK[sepTier]>TIER_RANK[overallTier])overallTier=sepTier;
+
   const edge=Math.min(cand.freq-rangeMin,rangeMax-cand.freq);
   if(edge<0.5)score-=5;
   score=Math.max(0,Math.min(100,score));
-  let cls=score>=75?"good":score>=50?"warn":"bad";
-  let label=score>=75?"RECOMENDADA":score>=50?"CONDICIONAL":"EVITAR";
-  return {cand,score,cls,label,minSep:worstSep,nearestIM,nearestIMOrder,reasons};
+  // cls/label quedan por compatibilidad con el HTML existente, pero ahora se derivan del
+  // tier (la clasificación de 4 niveles), no directamente de rangos del score numérico.
+  const tierToClsLabel={
+    recomendado:{cls:"good",label:"RECOMENDADA"},
+    revisar:{cls:"warn",label:"REVISAR"},
+    advertencia:{cls:"warn",label:"ADVERTENCIA"},
+    critico:{cls:"bad",label:"CRÍTICO"}
+  };
+  const {cls,label}=tierToClsLabel[overallTier];
+  return {cand,score,cls,label,tier:overallTier,tierLabel:TIER_LABEL[overallTier],hits,orderCounts,minSep:worstSep,nearestIM,nearestIMOrder,reasons};
 }
 
 function calculate(){
   const min=parseFloat($("rangeMin").value),max=parseFloat($("rangeMax").value);
-  const opts={minSep:parseFloat($("minSeparation").value),imThreshold:parseFloat($("imThreshold").value),strict:$("strict").checked};
+  const opts={minSep:parseFloat($("minSeparation").value),imThreshold:parseFloat($("imThreshold").value),strict:$("strict").checked,criticalFloor:parseFloat($("criticalFloor")?.value)||0.010};
   renderSelfConflicts();
   if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min){$("results").innerHTML="<p class='bad-text'>Rango inválido.</p>";return}
   if(!state.occupied.length){$("results").innerHTML="<p class='hint'>Cargá al menos una frecuencia ocupada para generar recomendaciones.</p>";return}
@@ -247,18 +369,27 @@ function calculate(){
   }
   let candidates=generateCandidates(d,min,max).filter(c=>!state.occupied.some(f=>Math.abs(f.freq-c.freq)<1e-6));
   const allIm=intermods(state.occupied,5);
-  const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm,d)).sort((a,b)=>b.score-a.score).slice(0,parseInt($("resultCount").value)||20);
-  $("results").innerHTML=results.length?results.map((r,i)=>`
+  const dangerZones=precomputeDangerZones(state.occupied,5);
+  const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm,d,dangerZones))
+    .sort((a,b)=>TIER_RANK[a.tier]-TIER_RANK[b.tier]||b.score-a.score)
+    .slice(0,parseInt($("resultCount").value)||20);
+  $("results").innerHTML=results.length?results.map((r,i)=>{
+    const relevantHits=r.hits.filter(h=>h.tier!=="recomendado").sort((a,b)=>TIER_RANK[b.tier]-TIER_RANK[a.tier]||a.dist-b.dist);
+    const tableRows=relevantHits.map(h=>`<tr><td>${fmt(h.victim)}</td><td>IM${h.order}</td><td>${fmt(h.product)}</td><td>${fmt(h.dist)} MHz</td><td>${TIER_LABEL[h.tier]}</td></tr>`).join("");
+    return `
     <div class="result ${r.cls}">
-      <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${Math.round(r.score)}/100<br><small>${r.label}</small></div></div>
+      <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${r.tierLabel}<br><small>${Math.round(r.score)}/100</small></div></div>
       <div class="bar"><span style="width:${r.score}%"></span></div>
       <div class="small-grid">
         <div class="metric"><b>${fmt(r.minSep)} MHz</b>Separación mínima</div>
-        <div class="metric"><b>${r.nearestIM===Infinity?"—":fmt(r.nearestIM)+" MHz"}</b>IM más cercano</div>
-        <div class="metric"><b>${r.nearestIMOrder?`IM${r.nearestIMOrder}`:"—"}</b>Orden</div>
+        <div class="metric"><b>${r.orderCounts[3]}</b>Productos IM3</div>
+        <div class="metric"><b>${r.orderCounts[4]}</b>Productos IM4</div>
+        <div class="metric"><b>${r.orderCounts[5]}</b>Productos IM5</div>
       </div>
-      ${r.reasons.length?`<div class="meta">${r.reasons.join(" · ")}</div>`:"<div class='meta'>Sin conflicto matemático relevante detectado por el modelo.</div>"}
-    </div>`).join(""):"<p class='bad-text'>No hay candidatos dentro del rango y las capacidades del dispositivo.</p>";
+      ${tableRows?`<table class="im-table"><thead><tr><th>Víctima</th><th>Orden</th><th>Producto</th><th>Distancia</th><th>Nivel</th></tr></thead><tbody>${tableRows}</tbody></table>`:"<div class='meta'>Sin producto IM relevante dentro del margen configurado.</div>"}
+      ${r.reasons.length?`<div class="meta">${r.reasons.join(" · ")}</div>`:""}
+    </div>`;
+  }).join(""):"<p class='bad-text'>No hay candidatos dentro del rango y las capacidades del dispositivo.</p>";
 }
 
 /* ---- Etapa 5: importar resultados de scan pegados como texto ---- */
@@ -301,7 +432,7 @@ function importScan(){
    (swap) para no quedar atado a una trampa del algoritmo voraz. */
 function calculateSet(){
   const min=parseFloat($("rangeMin").value),max=parseFloat($("rangeMax").value);
-  const opts={minSep:parseFloat($("minSeparation").value),imThreshold:parseFloat($("imThreshold").value),strict:$("strict").checked};
+  const opts={minSep:parseFloat($("minSeparation").value),imThreshold:parseFloat($("imThreshold").value),strict:$("strict").checked,criticalFloor:parseFloat($("criticalFloor")?.value)||0.010};
   const n=Math.max(1,Math.min(24,parseInt($("setCount").value)||4));
   if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min){$("setResults").innerHTML="<p class='bad-text'>Rango inválido.</p>";return}
   const d=state.devices[$("deviceSelect").value];
@@ -313,9 +444,15 @@ function calculateSet(){
   if(basePool.length<n){$("setResults").innerHTML="<p class='bad-text'>No hay suficientes candidatos en el rango para armar un conjunto de ese tamaño.</p>";return}
 
   const asOccupied=f=>({freq:f,powerMw:null,digital:false,source:"set"});
+  // maxOrder=4 acá (no 5): precomputeDangerZones explota combinatoriamente con el orden más alto
+  // (~65% de las zonas a m=5 son solo de orden 5, que además es el de menor peso/prioridad) y este
+  // loop se corre ~3n veces con un set que va creciendo — mantenerlo en 5 volvía "buscar conjunto"
+  // notablemente lento en dispositivos de barrido continuo. calculate() (un candidato por vez) sí
+  // usa 5 completo, porque ahí el costo es una sola vez por click, no ~15 veces.
   function scorePool(pool,working){
     const allIm=intermods(working,5);
-    return pool.map(c=>scoreCandidate(c,working,min,max,opts,allIm,d));
+    const dangerZones=precomputeDangerZones(working,4);
+    return pool.map(c=>scoreCandidate(c,working,min,max,opts,allIm,d,dangerZones));
   }
 
   // Paso 1: selección voraz secuencial (cada pick se suma al set antes del siguiente)
@@ -344,7 +481,7 @@ function calculateSet(){
   const finalWorking=[...state.occupied,...picks.map(p=>asOccupied(p.freq))];
   const finalScored=picks.map(p=>{
     const others=finalWorking.filter(o=>o.freq!==p.freq);
-    return scoreCandidate(p,others,min,max,opts,intermods(others,5),d);
+    return scoreCandidate(p,others,min,max,opts,intermods(others,5),d,precomputeDangerZones(others,4));
   });
   const worst=Math.min(...finalScored.map(r=>r.score));
   const mutualSeps=picks.flatMap((p,i)=>picks.filter((_,j)=>j!==i).map(q=>Math.abs(p.freq-q.freq)));
@@ -354,7 +491,7 @@ function calculateSet(){
     <p class="meta">Conjunto de ${picks.length} frecuencia(s)${minMutual!==null?` · separación mínima interna ${fmt(minMutual)} MHz`:""} · peor score individual ${Math.round(worst)}/100</p>
     ${finalScored.map(r=>`
     <div class="result ${r.cls}">
-      <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${Math.round(r.score)}/100<br><small>${r.label}</small></div></div>
+      <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${r.tierLabel}<br><small>${Math.round(r.score)}/100</small></div></div>
       <div class="bar"><span style="width:${r.score}%"></span></div>
     </div>`).join("")}`;
 }
