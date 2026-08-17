@@ -109,7 +109,9 @@ async function main() {
   doc.getElementById("addFreq").onclick();
   const postHtml = doc.getElementById("selfConflicts").innerHTML;
   check("agregar 561.220 dispara el diagnóstico (2 fantasmas IM5 reales)", postHtml.includes("IM5") && (postHtml.match(/conflict-item/g) || []).length === 2);
-  check("el texto del diagnóstico no dice CRÍTICO para este caso (20kHz reales = ADVERTENCIA)", postHtml.includes("ADVERTENCIA") && !postHtml.includes("CRÍTICO"));
+  check("el texto del diagnóstico no dice CRÍTICO para este caso (20kHz reales = advertencia/alto)", postHtml.includes("ALTO") && !postHtml.includes("CRÍTICO"));
+
+  check("el label del candidato con 4 métricas incluye IM2", doc.getElementById("results").innerHTML.includes("Productos IM2"));
 
   console.log("\n=== RESULTADOS E2E ===");
   let allOk = true;

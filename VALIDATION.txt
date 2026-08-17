@@ -136,3 +136,59 @@ e2e (jsdom) ampliado a 18 checks, incluyendo el caso exacto del documento
 como regresión permanente. TODO OK.
 
 === Resultado global final: PASS (18/18 e2e, bug de unidades corregido y confirmado) ===
+
+=== Segunda ronda: pesos por orden, relevancia de rango, score no-acumulativo ===
+
+DIAGNÓSTICO PEDIDO (antes de tocar código):
+
+1) Cómo funciona scoreCandidate(): puntúa un candidato contra allIm (fantasmas de
+   las ocupadas previas) + dangerZones (fantasmas que SE FORMARÍAN si se agrega
+   el candidato). Ya usaba el mismo motor para ambos casos desde la ronda anterior.
+2) Por qué 561.220 pasaba: ya diagnosticado y corregido en la ronda anterior
+   (dangerZones no existía todavía en ese momento). Sigue correcto acá: advertencia.
+3) Cómo se generan IM2-IM5: intermods() enumera TODAS las combinaciones de
+   coeficientes enteros por ocupada (de -orden a +orden), se queda con las que
+   suman entre 2 y el orden pedido con al menos 2 frecuencias no-nulas.
+4) Por qué aparecen tantas advertencias con 6 transmisores: investigado a fondo,
+   ver hallazgo abajo. No era un error de lógica.
+
+HALLAZGO: con 6 ocupadas (2 Sennheiser G4 + 4 BOYA reales) se generan 2130
+productos únicos (IM2:30, IM3:170, IM4:500, IM5:1430 — 67% del total es IM5).
+El 84.4% de esos 2130 caen FUERA del rango de trabajo BOYA (556.71-595.98).
+De los candidatos con un hit a <10kHz, 18/29 eran IM5 y 11/29 eran IM3 — y los
+36 hits IM5 clasificados CRÍTICO tenían distancia EXACTA de 0.000 MHz, no
+"cerca por casualidad": la grilla fija de BOYA (paso 0.41MHz) genera coincidencias
+matemáticamente exactas entre combinaciones de canales de la misma grilla.
+Confirmado corriendo el mismo caso con candidatos de grilla más fina (THEOS,
+0.1MHz): la proporción de coincidencias EXACTAS baja, pero el 0% recomendado
+persiste por densidad general de IM3 (170 productos en un rango angosto).
+
+Gradiente confirmado (mismo rango BOYA, sumando transmisores de a uno):
+  n=2 -> 80.2% recomendado | n=3 -> 43.2% | n=4 -> 11.7% | n=5 -> 0.0% | n=6 -> 0.0%
+Degradación suave y monótona, no un salto — coherente con densidad combinatoria
+real, no con un umbral roto. Documento pidió explícitamente no resolver esto
+apagando IM4/IM5; no se hizo. Se documenta como limitación real del ancho de
+banda BOYA con 5+ transmisores simultáneos, no como bug del clasificador.
+
+CAMBIOS:
+- ORDER_WEIGHT centralizado {2:1.2, 3:1.6, 4:0.8, 5:0.5} (antes repetido en 3
+  funciones con literales).
+- classifyConflict(): piso crítico escalado por (orderWeight/1.6)^2 (antes
+  lineal) — el escalado lineal seguía marcando CRÍTICO por volumen de IM4/IM5,
+  no por gravedad real de cada punto.
+- intermods()/precomputeDangerZones(): parámetro relevantRange opcional,
+  marca inRange en cada producto/zona; fuera de rango se descuenta x0.15 en
+  vez de pesar igual que dentro del rango.
+- scoreCandidate(): score ahora sale del PEOR riskScore encontrado + empujón
+  chico acotado (max 5 hits extra), no de la suma de todos los hits — "la
+  cantidad no debe ser el criterio principal" (pedido explícito).
+- Tabla de detalle marca "(fuera de rango)" en los hits descontados; métricas
+  ahora muestran IM2/IM3/IM4/IM5 (antes solo IM3/IM4/IM5).
+- Tier "advertencia" renombrado a "🟠 ALTO / NO RECOMENDADO" en el label visible.
+
+PRUEBAS: 561.220 (caso previo) sigue en advertencia/alto, no crítico ni
+recomendado. Set por defecto (n=4) sigue sin falsos positivos. Gradiente n=2..6
+confirmado con números reales (arriba). Performance: calculate() sobre THEOS
+con 4 ocupadas, caso típico, 251ms. e2e (jsdom) ampliado a 19 checks: TODO OK.
+
+=== Resultado global final: PASS (19/19 e2e; hallazgo de fondo documentado, no oculto) ===

@@ -158,7 +158,7 @@ function generateCandidates(d,min,max){
    not a full RF front-end simulation. occupied is [{freq,powerMw,digital},...];
    each returned product carries which occupied entries contributed (allDigital)
    and a combined power weight, used later to modulate the score penalty. */
-function intermods(occupied,maxOrder=5){
+function intermods(occupied,maxOrder=5,relevantRange){
   const freqs=occupied.map(o=>o.freq);
   const products=[];
   const uniq=new Set();
@@ -178,7 +178,8 @@ function intermods(occupied,maxOrder=5){
           const allDigital=contributors.length>0&&contributors.every(j=>!!occupied[j].digital);
           const powFactors=contributors.map(j=>powerFactor(occupied[j].powerMw));
           const geoMeanPow=powFactors.length?Math.pow(powFactors.reduce((a,b)=>a*b,1),1/powFactors.length):1;
-          products.push({freq:value,order,coeffs:[...coeffs],allDigital,powerWeight:geoMeanPow});
+          const inRange=!relevantRange||(value>=relevantRange.min&&value<=relevantRange.max);
+          products.push({freq:value,order,coeffs:[...coeffs],allDigital,powerWeight:geoMeanPow,inRange});
         }
         return;
       }
@@ -204,7 +205,7 @@ function intermods(occupied,maxOrder=5){
    ahí se despeja qué frecuencia de candidato completaría ese fantasma exacto. El resultado
    es una lista chica de "zonas peligrosas" (centro + orden) contra la que cada candidato
    se compara con una resta, no con un intermods() entero. */
-function precomputeDangerZones(occupied,maxOrder=5){
+function precomputeDangerZones(occupied,maxOrder=5,relevantRange){
   const zones=[];
   for(let vi=0;vi<occupied.length;vi++){
     const victim=occupied[vi];
@@ -221,7 +222,8 @@ function precomputeDangerZones(occupied,maxOrder=5){
           if(totalOrder<2||totalOrder>maxOrder)continue;
           const center=(victim.freq-partial)/mc;
           if(!Number.isFinite(center)||center<=0)continue;
-          zones.push({center,mcAbs:Math.abs(mc),order:totalOrder,victimFreq:victim.freq,contributors});
+          const inRange=!relevantRange||(center>=relevantRange.min&&center<=relevantRange.max);
+          zones.push({center,mcAbs:Math.abs(mc),order:totalOrder,victimFreq:victim.freq,contributors,inRange});
         }
         return;
       }
@@ -246,20 +248,27 @@ function lowerBound(sortedZones,target){
 }
 
 const TIER_RANK={recomendado:0,revisar:1,advertencia:2,critico:3};
-const TIER_LABEL={recomendado:"🟢 RECOMENDADO",revisar:"🟡 REVISAR",advertencia:"🟠 ADVERTENCIA",critico:"🔴 CRÍTICO"};
+const TIER_LABEL={recomendado:"🟢 RECOMENDADO",revisar:"🟡 REVISAR",advertencia:"🟠 ALTO / NO RECOMENDADO",critico:"🔴 CRÍTICO"};
+const ORDER_WEIGHT={2:1.2,3:1.6,4:0.8,5:0.5}; // IM3 prioridad muy alta, IM2 alta, IM4 menor que IM3, IM5 solo pesa fuerte si está muy cerca
 
-/* Clasificación en 4 niveles en vez de un simple sí/no. Dos condiciones para "crítico",
-   a propósito, porque un producto exactamente encima (o a muy pocos kHz) es grave sin
-   importar el orden — un IM5 a 0 kHz es tan crítico como un IM3 a 0 kHz — pero a distancias
-   moderadas SÍ debe importar el orden: no todo IM5 es un IM3. riskScore combina ambas cosas;
-   criticalFloorMHz es la distancia absoluta por debajo de la cual no importa el orden.
-   Configurable desde la UI (umbral crítico) y desde "Zona crítica IM"/"Modo estricto". */
+/* Clasificación en 4 niveles en vez de un simple sí/no. El piso crítico (distancia por
+   debajo de la cual algo es crítico sin importar el resto) se ESCALA por el peso del orden:
+   un IM3 casi exacto es crítico incluso a la distancia "base" del piso, pero un IM5 necesita
+   estar unas 3 veces más cerca — con 6+ transmisores hay cientos de productos IM5 combinando
+   simplemente por cantidad de combinaciones posibles, y sin este escalado, ese volumen hacía
+   que casi cualquier candidato tuviera ALGÚN IM5 a menos de 10kHz por pura densidad, no porque
+   ese punto en particular fuera realmente grave. riskScore sigue combinando distancia real y
+   orden para todo lo que no llega al piso crítico. */
 function classifyConflict(distanceMHz,order,effImThreshold,strict,criticalFloorMHz){
   if(distanceMHz>=effImThreshold)return {tier:"recomendado",riskScore:0};
-  const orderWeight=order===3?1.6:order===2?1.2:(order===4?0.8:0.5);
+  const orderWeight=ORDER_WEIGHT[order]||0.5;
   const severity=(effImThreshold-distanceMHz)/effImThreshold;
   const riskScore=severity*orderWeight*(strict?1.6:1);
-  if(distanceMHz<=criticalFloorMHz||riskScore>=1.0)return {tier:"critico",riskScore};
+  // Escalado CUADRÁTICO (no lineal): con 5-6+ transmisores el volumen de IM4/IM5 crece tanto
+  // (cientos a miles de productos) que incluso un piso lineal seguía siendo "crítico" en casi
+  // cualquier candidato, por pura densidad combinatoria, no por gravedad real de ESE punto.
+  const scaledFloor=criticalFloorMHz*Math.pow(orderWeight/ORDER_WEIGHT[3],2);
+  if(distanceMHz<=scaledFloor||riskScore>=1.0)return {tier:"critico",riskScore};
   if(riskScore>=0.35)return {tier:"advertencia",riskScore};
   return {tier:"revisar",riskScore};
 }
@@ -288,6 +297,7 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
   }else score+=Math.min(10,worstSep);
 
   const criticalFloor=Number.isFinite(opts.criticalFloor)?opts.criticalFloor:0.010;
+  const RANGE_DISCOUNT=0.15; // fuera del rango de trabajo: se informa, pero pesa poco (no cero)
   const hits=[]; // {victim, order, product, dist, source:'existente'|'nuevo', tier, riskScore}
 
   let nearestIM=Infinity, nearestIMOrder=null;
@@ -296,10 +306,11 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
     if(dist<nearestIM){nearestIM=dist;nearestIMOrder=p.order}
     if(dist<effImThreshold){
       const {tier,riskScore}=classifyConflict(dist,p.order,effImThreshold,opts.strict,criticalFloor);
+      if(tier==="recomendado")continue;
       const digitalDiscount=p.allDigital?0.5:1;
-      const weighted=riskScore*digitalDiscount*p.powerWeight;
-      if(tier!=="recomendado")score-=35*weighted;
-      hits.push({victim:cand.freq,order:p.order,product:p.freq,dist,source:"existente",tier,riskScore:weighted});
+      const rangeDiscount=p.inRange===false?RANGE_DISCOUNT:1;
+      const weighted=riskScore*digitalDiscount*p.powerWeight*rangeDiscount;
+      hits.push({victim:cand.freq,order:p.order,product:p.freq,dist,source:"existente",tier,riskScore:weighted,inRange:p.inRange!==false});
     }
   }
   if(nearestIM<effImThreshold)reasons.push(`IM${nearestIMOrder} a ${fmt(nearestIM)} MHz`);
@@ -322,18 +333,28 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
         // así que se puede pasar cualquiera de los dos pares consistentes; el piso crítico en cambio SÍ necesita
         // la distancia real del producto (no la del candidato sin escalar), o con mcAbs>=2 se subestima a la mitad o menos.
         const {tier,riskScore}=classifyConflict(productDist,z.order,effImThreshold,opts.strict,criticalFloor);
-        if(tier!=="recomendado")score-=30*riskScore;
+        if(tier==="recomendado")continue;
+        const rangeDiscount=z.inRange===false?RANGE_DISCOUNT:1;
+        const weighted=riskScore*rangeDiscount;
         if(dist<worstZoneDist){worstZoneDist=dist;worstZone=z}
-        hits.push({victim:z.victimFreq,order:z.order,product:cand.freq /* aprox: el candidato ES uno de los generadores */,dist:productDist,source:"nuevo",tier,riskScore});
+        hits.push({victim:z.victimFreq,order:z.order,product:cand.freq /* aprox: el candidato ES uno de los generadores */,dist:productDist,source:"nuevo",tier,riskScore:weighted,inRange:z.inRange!==false});
       }
     }
   }
   if(worstZone)reasons.push(`si se agrega, IM${worstZone.order} nuevo sobre ${fmt(worstZone.victimFreq)} MHz`);
 
+  // Score dominado por el PEOR hit, no por la suma de todos — la cantidad de productos
+  // no debe ser el criterio principal (un candidato con muchos IM5 lejanos puede ser mejor
+  // que uno con un único IM5 muy cerca). Cada hit adicional más allá del peor suma un empujón
+  // chico y acotado, no proporcional a cuántos haya.
+  const relevantHitsForScore=hits.filter(h=>h.tier!=="recomendado");
+  const worstRisk=relevantHitsForScore.length?Math.max(...relevantHitsForScore.map(h=>h.riskScore)):0;
+  score-=40*worstRisk+3*Math.min(Math.max(relevantHitsForScore.length-1,0),5);
+
   // Nivel general del candidato: el peor tier entre todos los hits relevantes.
   let overallTier="recomendado";
   for(const h of hits)if(TIER_RANK[h.tier]>TIER_RANK[overallTier])overallTier=h.tier;
-  const orderCounts={3:0,4:0,5:0};
+  const orderCounts={2:0,3:0,4:0,5:0};
   hits.forEach(h=>{if(h.tier!=="recomendado"&&orderCounts[h.order]!==undefined)orderCounts[h.order]++});
 
   // La separación mínima es un problema aparte de la clasificación IM, pero si es grave
@@ -368,20 +389,22 @@ function calculate(){
     return;
   }
   let candidates=generateCandidates(d,min,max).filter(c=>!state.occupied.some(f=>Math.abs(f.freq-c.freq)<1e-6));
-  const allIm=intermods(state.occupied,5);
-  const dangerZones=precomputeDangerZones(state.occupied,5);
+  const relevantRange={min:min-2,max:max+2}; // rango de trabajo + margen: productos IM fuera de esto informan pero pesan poco
+  const allIm=intermods(state.occupied,5,relevantRange);
+  const dangerZones=precomputeDangerZones(state.occupied,5,relevantRange);
   const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm,d,dangerZones))
     .sort((a,b)=>TIER_RANK[a.tier]-TIER_RANK[b.tier]||b.score-a.score)
     .slice(0,parseInt($("resultCount").value)||20);
   $("results").innerHTML=results.length?results.map((r,i)=>{
     const relevantHits=r.hits.filter(h=>h.tier!=="recomendado").sort((a,b)=>TIER_RANK[b.tier]-TIER_RANK[a.tier]||a.dist-b.dist);
-    const tableRows=relevantHits.map(h=>`<tr><td>${fmt(h.victim)}</td><td>IM${h.order}</td><td>${fmt(h.product)}</td><td>${fmt(h.dist)} MHz</td><td>${TIER_LABEL[h.tier]}</td></tr>`).join("");
+    const tableRows=relevantHits.map(h=>`<tr><td>${fmt(h.victim)}</td><td>IM${h.order}</td><td>${fmt(h.product)}</td><td>${fmt(h.dist)} MHz</td><td>${TIER_LABEL[h.tier]}${h.inRange===false?' <small>(fuera de rango)</small>':''}</td></tr>`).join("");
     return `
     <div class="result ${r.cls}">
       <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${r.tierLabel}<br><small>${Math.round(r.score)}/100</small></div></div>
       <div class="bar"><span style="width:${r.score}%"></span></div>
       <div class="small-grid">
         <div class="metric"><b>${fmt(r.minSep)} MHz</b>Separación mínima</div>
+        <div class="metric"><b>${r.orderCounts[2]}</b>Productos IM2</div>
         <div class="metric"><b>${r.orderCounts[3]}</b>Productos IM3</div>
         <div class="metric"><b>${r.orderCounts[4]}</b>Productos IM4</div>
         <div class="metric"><b>${r.orderCounts[5]}</b>Productos IM5</div>
@@ -450,8 +473,9 @@ function calculateSet(){
   // notablemente lento en dispositivos de barrido continuo. calculate() (un candidato por vez) sí
   // usa 5 completo, porque ahí el costo es una sola vez por click, no ~15 veces.
   function scorePool(pool,working){
-    const allIm=intermods(working,5);
-    const dangerZones=precomputeDangerZones(working,4);
+    const relevantRange={min:min-2,max:max+2};
+    const allIm=intermods(working,5,relevantRange);
+    const dangerZones=precomputeDangerZones(working,4,relevantRange);
     return pool.map(c=>scoreCandidate(c,working,min,max,opts,allIm,d,dangerZones));
   }
 
@@ -481,7 +505,8 @@ function calculateSet(){
   const finalWorking=[...state.occupied,...picks.map(p=>asOccupied(p.freq))];
   const finalScored=picks.map(p=>{
     const others=finalWorking.filter(o=>o.freq!==p.freq);
-    return scoreCandidate(p,others,min,max,opts,intermods(others,5),d,precomputeDangerZones(others,4));
+    const relevantRange={min:min-2,max:max+2};
+    return scoreCandidate(p,others,min,max,opts,intermods(others,5,relevantRange),d,precomputeDangerZones(others,4,relevantRange));
   });
   const worst=Math.min(...finalScored.map(r=>r.score));
   const mutualSeps=picks.flatMap((p,i)=>picks.filter((_,j)=>j!==i).map(q=>Math.abs(p.freq-q.freq)));
