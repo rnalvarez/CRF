@@ -41,10 +41,15 @@
     return PROFILE_DEFS[window.CRF_COORDINATION_STATE.profile]||PROFILE_DEFS.standard;
   }
 
+  let deviceData=null;
+  const deviceDataReady=fetch('data/devices.json')
+    .then(r=>r.ok?r.json():{})
+    .then(data=>{deviceData=data;return data;})
+    .catch(()=>({}));
+
   function currentDevice(){
-    const devices=window.state?.devices;
     const select=document.getElementById('deviceSelect');
-    return devices&&select?devices[select.value]:null;
+    return deviceData&&select?deviceData[select.value]:null;
   }
 
   function effectiveGuard(){
@@ -56,8 +61,8 @@
 
     const d=currentDevice();
     // For high-density coordination the receiver RF bandwidth is the physical
-    // minimum. If the profile has no published bandwidth, retain a conservative
-    // fallback rather than inventing a receiver specification.
+    // minimum. If the profile has no published bandwidth, use channel spacing;
+    // if neither is published, retain a conservative fallback.
     if(Number.isFinite(d?.bandwidth)&&d.bandwidth>0)return d.bandwidth;
     if(Number.isFinite(d?.channelSpacing)&&d.channelSpacing>0)return d.channelSpacing;
     return base*0.5;
@@ -120,7 +125,7 @@
     if(typeof window.calculate==='function')window.calculate();
   }
 
-  function bind(){
+  async function bind(){
     const select=document.getElementById('coordinationProfile');
     const minInput=document.getElementById('minSeparation');
     if(!select||!minInput)return;
@@ -142,7 +147,8 @@
     });
 
     const deviceSelect=document.getElementById('deviceSelect');
-    if(deviceSelect)deviceSelect.addEventListener('change',function(){
+    if(deviceSelect)deviceSelect.addEventListener('change',async function(){
+      await deviceDataReady;
       if(window.CRF_COORDINATION_STATE.profile==='dense')recalculate();
     });
 
@@ -153,16 +159,13 @@
         return originalCalculate.apply(this,arguments);
       };
       document.getElementById('calculate').onclick=window.calculate;
-      document.getElementById('findSet').onclick=window.calculateSet;
     }
 
+    await deviceDataReady;
     applyGuard();
     updateProfileDescription();
   }
 
-  // app.js initializes before this file. A zero-delay bind lets its async device
-  // loading finish while still attaching to the same page without changing the
-  // original initialization sequence.
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});
-  else setTimeout(bind,0);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bind();},{once:true});
+  else setTimeout(()=>{bind();},0);
 })();
