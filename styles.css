@@ -85,3 +85,6 @@ details.help[open] summary{background:#111827;color:#fff}
 .im-table th{text-align:left;font-weight:600;color:#6b7280;padding:4px 8px;border-bottom:1px solid #e5e7eb}
 .im-table td{padding:4px 8px;border-bottom:1px solid #f3f4f6;font-variant-numeric:tabular-nums}
 .im-table tr:last-child td{border-bottom:none}
+
+/* --- Nivel informativo (fuera de rango): ni bueno ni malo, un dato aparte --- */
+.result.info{border-left:5px solid #2563eb}

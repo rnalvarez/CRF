@@ -23,6 +23,25 @@
       <label>Inicio (MHz)<input id="rangeMin" type="number" step="0.001" value="550"></label>
       <label>Fin (MHz)<input id="rangeMax" type="number" step="0.001" value="600"></label>
     </div>
+    <div class="form-grid">
+      <div class="field">
+        <div class="field-head">
+          <label for="rangeMargin">Margen de análisis (MHz)</label>
+          <details class="help">
+            <summary aria-label="Ayuda: Margen de análisis">i</summary>
+            <div class="help-panel">
+              <p>Rango operativo real (Inicio–Fin) + este margen = zona donde un producto IM se considera "relevante". Fuera de esa zona ampliada, el producto se sigue calculando y mostrando, pero nunca puede clasificar un candidato como crítico o advertencia por sí solo — queda como ℹ️ información técnica.</p>
+              <p class="help-panel-title">Valores recomendados:</p>
+              <ul>
+                <li><strong>1 - 2 MHz:</strong> Suficiente para no perder productos justo en el borde del rango.</li>
+                <li><strong>3 - 5 MHz:</strong> Si el rango de trabajo es angosto y querés más contexto de lo que pasa cerca de los bordes.</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+        <input id="rangeMargin" type="number" step="0.5" min="0" value="2">
+      </div>
+    </div>
     <p class="hint">Es el rango que querés que utilice el algoritmo. No evalúa legalidad/regulación.</p>
   </section>
 

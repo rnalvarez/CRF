@@ -113,6 +113,51 @@ async function main() {
 
   check("el label del candidato con 4 métricas incluye IM2", doc.getElementById("results").innerHTML.includes("Productos IM2"));
 
+  // --- Los 5 casos pedidos para inRange/fuera_de_rango, contra las funciones reales (no una copia) ---
+  const w = window;
+  {
+    const min=560,max=570,rr={min:min-2,max:max+2};
+    const occ=[{freq:300,powerMw:null,digital:false},{freq:280,powerMw:null,digital:false},{freq:250,powerMw:null,digital:false}];
+    const allIm=w.intermods(occ,5,rr);
+    const dz=w.precomputeDangerZones(occ,5,rr);
+    const opts={minSep:0.1,imThreshold:12,strict:false,criticalFloor:0.010};
+
+    const im4Fuera=allIm.filter(p=>p.order===4&&p.inRange===false&&(Math.abs(p.freq-max)<15||Math.abs(p.freq-min)<15)).sort((a,b)=>Math.min(Math.abs(a.freq-max),Math.abs(a.freq-min))-Math.min(Math.abs(b.freq-max),Math.abs(b.freq-min)))[0];
+    if(im4Fuera){
+      const r=w.scoreCandidate({freq:im4Fuera.freq>max?max:min,label:"t"},occ,min,max,opts,allIm,{},dz);
+      check("IM4 fuera de rango, único hit -> candidato NO crítico", r.tier!=="critico");
+    }
+    const im3Fuera=allIm.filter(p=>p.order===3&&p.inRange===false&&(Math.abs(p.freq-max)<15||Math.abs(p.freq-min)<15)).sort((a,b)=>Math.min(Math.abs(a.freq-max),Math.abs(a.freq-min))-Math.min(Math.abs(b.freq-max),Math.abs(b.freq-min)))[0];
+    if(im3Fuera){
+      const r=w.scoreCandidate({freq:im3Fuera.freq>max?max:min,label:"t"},occ,min,max,opts,allIm,{},dz);
+      check("IM3 fuera de rango, único hit -> candidato NO crítico", r.tier!=="critico");
+    }
+  }
+  {
+    const min=556.71,max=595.98,rr={min:min-2,max:max+2};
+    const occ=[{freq:556.710,powerMw:null,digital:false},{freq:558.350,powerMw:null,digital:false},{freq:559.990,powerMw:null,digital:false}];
+    const allIm=w.intermods(occ,5,rr), dz=w.precomputeDangerZones(occ,5,rr);
+    const r=w.scoreCandidate({freq:561.630,label:"t"},occ,min,max,{minSep:0.1,imThreshold:0.5,strict:false,criticalFloor:0.010},allIm,{},dz);
+    check("IM3 dentro de rango y exacto -> sigue CRÍTICO", r.tier==="critico");
+  }
+  {
+    const min=556.71,max=595.98,rr={min:min-2,max:max+2};
+    const occ=[{freq:566.200,powerMw:30,digital:false},{freq:574.200,powerMw:30,digital:false},{freq:559.990,powerMw:null,digital:false},{freq:584.180,powerMw:null,digital:false}];
+    const allIm=w.intermods(occ,5,rr), dz=w.precomputeDangerZones(occ,5,rr);
+    const r=w.scoreCandidate({freq:561.220,label:"t"},occ,min,max,{minSep:0.8,imThreshold:0.5,strict:false,criticalFloor:0.010},allIm,{},dz);
+    check("IM5 dentro de rango y cerca (561.220) -> sigue ADVERTENCIA", r.tier==="advertencia");
+  }
+  {
+    const min=560,max=570,rr={min:min-2,max:max+2};
+    const occ=[{freq:300,powerMw:null,digital:false},{freq:280,powerMw:null,digital:false},{freq:250,powerMw:null,digital:false},{freq:560.05,powerMw:null,digital:false}];
+    const allIm=w.intermods(occ,5,rr), dz=w.precomputeDangerZones(occ,5,rr);
+    const opts={minSep:0.1,imThreshold:12,strict:false,criticalFloor:0.010};
+    const r=w.scoreCandidate({freq:560,label:"t"},occ,min,max,opts,allIm,{},dz);
+    const rank={recomendado:0,fuera_de_rango:1,revisar:2,advertencia:3,critico:4};
+    const peorDentro=r.hits.filter(h=>h.inRange!==false&&h.tier!=="recomendado").sort((a,b)=>rank[b.tier]-rank[a.tier])[0];
+    check("mezcla fuera+dentro de rango -> el tier final lo determina el de DENTRO", peorDentro&&r.tier===peorDentro.tier);
+  }
+
   console.log("\n=== RESULTADOS E2E ===");
   let allOk = true;
   for (const r of results) {

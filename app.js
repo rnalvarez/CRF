@@ -12,6 +12,10 @@ function selectivityFactor(d){
   if(!d||!d.selectivityDb)return 1;
   return Math.max(0.7,Math.min(1,1-(d.selectivityDb-50)/200));
 }
+function getRangeMargin(){
+  const v=parseFloat($("rangeMargin")?.value);
+  return Number.isFinite(v)&&v>=0?v:2;
+}
 
 async function init(){
   state.devices=await fetch("data/devices.json").then(r=>r.json());
@@ -247,26 +251,42 @@ function lowerBound(sortedZones,target){
   return lo;
 }
 
-const TIER_RANK={recomendado:0,revisar:1,advertencia:2,critico:3};
-const TIER_LABEL={recomendado:"🟢 RECOMENDADO",revisar:"🟡 REVISAR",advertencia:"🟠 ALTO / NO RECOMENDADO",critico:"🔴 CRÍTICO"};
+const TIER_RANK={recomendado:0,fuera_de_rango:1,revisar:2,advertencia:3,critico:4};
+const TIER_LABEL={recomendado:"🟢 RECOMENDADO",fuera_de_rango:"ℹ️ FUERA DE RANGO",revisar:"🟡 REVISAR",advertencia:"🟠 ALTO / NO RECOMENDADO",critico:"🔴 CRÍTICO"};
 const ORDER_WEIGHT={2:1.2,3:1.6,4:0.8,5:0.5}; // IM3 prioridad muy alta, IM2 alta, IM4 menor que IM3, IM5 solo pesa fuerte si está muy cerca
+const OUT_OF_RANGE_WEIGHT=0.15; // aporte mínimo al score de un producto fuera de rango — nunca determina el tier
 
-/* Clasificación en 4 niveles en vez de un simple sí/no. El piso crítico (distancia por
-   debajo de la cual algo es crítico sin importar el resto) se ESCALA por el peso del orden:
-   un IM3 casi exacto es crítico incluso a la distancia "base" del piso, pero un IM5 necesita
-   estar unas 3 veces más cerca — con 6+ transmisores hay cientos de productos IM5 combinando
-   simplemente por cantidad de combinaciones posibles, y sin este escalado, ese volumen hacía
-   que casi cualquier candidato tuviera ALGÚN IM5 a menos de 10kHz por pura densidad, no porque
-   ese punto en particular fuera realmente grave. riskScore sigue combinando distancia real y
-   orden para todo lo que no llega al piso crítico. */
-function classifyConflict(distanceMHz,order,effImThreshold,strict,criticalFloorMHz){
+/* Clasificación de un producto IM en 4 niveles de riesgo + 1 informativo, no un simple sí/no.
+
+   inRange se decide PRIMERO y separa dos ramas completamente distintas — no es un descuento
+   aplicado después sobre un tier ya calculado:
+
+   - Fuera del rango operativo relevante: el producto existe matemáticamente y se sigue
+     mostrando (nunca se descarta del análisis), pero el resultado es SIEMPRE "fuera_de_rango"
+     (informativo), sin importar orden ni distancia. Puede aportar un poco al score
+     (OUT_OF_RANGE_WEIGHT), pero nunca decide el peor tier del candidato: fuera_de_rango
+     rankea apenas por encima de "recomendado" y por debajo de "revisar" (TIER_RANK), así que
+     cualquier hit real dentro de rango siempre gana la comparación de "peor tier".
+
+   - Dentro del rango: clasificación normal por severidad y orden, sin cambios respecto de
+     antes. El piso crítico (distancia absoluta bajo la cual algo es crítico sin importar el
+     resto) se escala al cuadrado del peso relativo del orden — un IM3 casi exacto es crítico
+     incluso a la distancia "base" del piso, un IM5 necesita estar mucho más cerca — porque con
+     5-6+ transmisores el volumen de productos IM4/IM5 (cientos a miles) hacía que un piso parejo
+     marcara crítico por pura densidad combinatoria, no por gravedad real de ese punto puntual. */
+function classifyConflict(distanceMHz,order,effImThreshold,strict,criticalFloorMHz,inRange){
   if(distanceMHz>=effImThreshold)return {tier:"recomendado",riskScore:0};
   const orderWeight=ORDER_WEIGHT[order]||0.5;
   const severity=(effImThreshold-distanceMHz)/effImThreshold;
+
+  if(inRange===false){
+    // Rama aparte a propósito: nunca puede devolver crítico/advertencia/revisar, sin importar
+    // qué tan cerca o de qué orden sea. Es "información técnica", no un nivel de riesgo real.
+    const riskScore=severity*orderWeight*(strict?1.6:1)*OUT_OF_RANGE_WEIGHT;
+    return {tier:"fuera_de_rango",riskScore};
+  }
+
   const riskScore=severity*orderWeight*(strict?1.6:1);
-  // Escalado CUADRÁTICO (no lineal): con 5-6+ transmisores el volumen de IM4/IM5 crece tanto
-  // (cientos a miles de productos) que incluso un piso lineal seguía siendo "crítico" en casi
-  // cualquier candidato, por pura densidad combinatoria, no por gravedad real de ESE punto.
   const scaledFloor=criticalFloorMHz*Math.pow(orderWeight/ORDER_WEIGHT[3],2);
   if(distanceMHz<=scaledFloor||riskScore>=1.0)return {tier:"critico",riskScore};
   if(riskScore>=0.35)return {tier:"advertencia",riskScore};
@@ -297,7 +317,6 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
   }else score+=Math.min(10,worstSep);
 
   const criticalFloor=Number.isFinite(opts.criticalFloor)?opts.criticalFloor:0.010;
-  const RANGE_DISCOUNT=0.15; // fuera del rango de trabajo: se informa, pero pesa poco (no cero)
   const hits=[]; // {victim, order, product, dist, source:'existente'|'nuevo', tier, riskScore}
 
   let nearestIM=Infinity, nearestIMOrder=null;
@@ -305,11 +324,10 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
     const dist=Math.abs(cand.freq-p.freq);
     if(dist<nearestIM){nearestIM=dist;nearestIMOrder=p.order}
     if(dist<effImThreshold){
-      const {tier,riskScore}=classifyConflict(dist,p.order,effImThreshold,opts.strict,criticalFloor);
+      const {tier,riskScore}=classifyConflict(dist,p.order,effImThreshold,opts.strict,criticalFloor,p.inRange);
       if(tier==="recomendado")continue;
       const digitalDiscount=p.allDigital?0.5:1;
-      const rangeDiscount=p.inRange===false?RANGE_DISCOUNT:1;
-      const weighted=riskScore*digitalDiscount*p.powerWeight*rangeDiscount;
+      const weighted=riskScore*digitalDiscount*p.powerWeight;
       hits.push({victim:cand.freq,order:p.order,product:p.freq,dist,source:"existente",tier,riskScore:weighted,inRange:p.inRange!==false});
     }
   }
@@ -332,12 +350,10 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
         // severidad: matemáticamente (zoneThreshold-dist)/zoneThreshold === (effImThreshold-productDist)/effImThreshold,
         // así que se puede pasar cualquiera de los dos pares consistentes; el piso crítico en cambio SÍ necesita
         // la distancia real del producto (no la del candidato sin escalar), o con mcAbs>=2 se subestima a la mitad o menos.
-        const {tier,riskScore}=classifyConflict(productDist,z.order,effImThreshold,opts.strict,criticalFloor);
+        const {tier,riskScore}=classifyConflict(productDist,z.order,effImThreshold,opts.strict,criticalFloor,z.inRange);
         if(tier==="recomendado")continue;
-        const rangeDiscount=z.inRange===false?RANGE_DISCOUNT:1;
-        const weighted=riskScore*rangeDiscount;
         if(dist<worstZoneDist){worstZoneDist=dist;worstZone=z}
-        hits.push({victim:z.victimFreq,order:z.order,product:cand.freq /* aprox: el candidato ES uno de los generadores */,dist:productDist,source:"nuevo",tier,riskScore:weighted,inRange:z.inRange!==false});
+        hits.push({victim:z.victimFreq,order:z.order,product:cand.freq /* aprox: el candidato ES uno de los generadores */,dist:productDist,source:"nuevo",tier,riskScore,inRange:z.inRange!==false});
       }
     }
   }
@@ -369,6 +385,7 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
   // tier (la clasificación de 4 niveles), no directamente de rangos del score numérico.
   const tierToClsLabel={
     recomendado:{cls:"good",label:"RECOMENDADA"},
+    fuera_de_rango:{cls:"info",label:"FUERA DE RANGO"},
     revisar:{cls:"warn",label:"REVISAR"},
     advertencia:{cls:"warn",label:"ADVERTENCIA"},
     critico:{cls:"bad",label:"CRÍTICO"}
@@ -389,7 +406,7 @@ function calculate(){
     return;
   }
   let candidates=generateCandidates(d,min,max).filter(c=>!state.occupied.some(f=>Math.abs(f.freq-c.freq)<1e-6));
-  const relevantRange={min:min-2,max:max+2}; // rango de trabajo + margen: productos IM fuera de esto informan pero pesan poco
+  const relevantRange={min:min-getRangeMargin(),max:max+getRangeMargin()}; // rango de trabajo + margen: productos IM fuera de esto informan pero pesan poco
   const allIm=intermods(state.occupied,5,relevantRange);
   const dangerZones=precomputeDangerZones(state.occupied,5,relevantRange);
   const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm,d,dangerZones))
@@ -473,7 +490,7 @@ function calculateSet(){
   // notablemente lento en dispositivos de barrido continuo. calculate() (un candidato por vez) sí
   // usa 5 completo, porque ahí el costo es una sola vez por click, no ~15 veces.
   function scorePool(pool,working){
-    const relevantRange={min:min-2,max:max+2};
+    const relevantRange={min:min-getRangeMargin(),max:max+getRangeMargin()};
     const allIm=intermods(working,5,relevantRange);
     const dangerZones=precomputeDangerZones(working,4,relevantRange);
     return pool.map(c=>scoreCandidate(c,working,min,max,opts,allIm,d,dangerZones));
@@ -505,7 +522,7 @@ function calculateSet(){
   const finalWorking=[...state.occupied,...picks.map(p=>asOccupied(p.freq))];
   const finalScored=picks.map(p=>{
     const others=finalWorking.filter(o=>o.freq!==p.freq);
-    const relevantRange={min:min-2,max:max+2};
+    const relevantRange={min:min-getRangeMargin(),max:max+getRangeMargin()};
     return scoreCandidate(p,others,min,max,opts,intermods(others,5,relevantRange),d,precomputeDangerZones(others,4,relevantRange));
   });
   const worst=Math.min(...finalScored.map(r=>r.score));

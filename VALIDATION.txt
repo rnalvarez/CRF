@@ -192,3 +192,33 @@ confirmado con números reales (arriba). Performance: calculate() sobre THEOS
 con 4 ocupadas, caso típico, 251ms. e2e (jsdom) ampliado a 19 checks: TODO OK.
 
 === Resultado global final: PASS (19/19 e2e; hallazgo de fondo documentado, no oculto) ===
+
+=== Tercera ronda: inRange como parte de la clasificación, no un descuento posterior ===
+
+Confirmado antes de cambiar nada (pedido explícito): classifyConflict() nunca
+recibía inRange -> el tier se decidía sin saber de rango, el x0.15 solo bajaba
+el score numérico después. Bajo settings default esto estaba dormido (margen
+2MHz > umbral 0.5MHz por defecto), pero se activaba con umbral > margen.
+
+CAMBIO: classifyConflict(dist, order, threshold, strict, criticalFloor, inRange)
+ahora recibe inRange y lo resuelve PRIMERO. Fuera de rango -> rama aparte,
+siempre tier "fuera_de_rango" (nuevo, TIER_RANK=1, entre recomendado=0 y
+revisar=2), nunca crítico/advertencia/revisar sin importar severidad. Aporta
+OUT_OF_RANGE_WEIGHT=0.15 al riskScore (antes era un multiplicador externo
+después de decidir el tier; ahora es parte de la rama de clasificación misma).
+UI: TIER_LABEL "ℹ️ FUERA DE RANGO", clase CSS .result.info (borde azul, ni
+verde/amarillo/rojo). Margen de relevantRange, antes fijo en 2, ahora campo
+"Margen de análisis (MHz)" en sección 1 (rango operativo real + margen =
+relevantRange, explícito).
+
+PRUEBAS (las 5 pedidas, con las funciones reales vía window.*, no una copia):
+1. IM4 fuera de rango, único hit -> candidato NO crítico: PASS
+2. IM3 fuera de rango, único hit -> candidato NO crítico: PASS
+3. IM3 dentro de rango y exacto -> sigue CRÍTICO: PASS
+4. IM5 dentro de rango y cerca (561.220, caso ya validado) -> sigue ADVERTENCIA: PASS
+5. Mezcla fuera+dentro de rango -> el tier final lo determina el de DENTRO: PASS
+
+e2e (jsdom) ampliado a 24 checks (5 nuevos + 19 existentes). TODO OK, sin
+regresiones sobre ninguna ronda anterior.
+
+=== Resultado global final: PASS (24/24 e2e) ===
