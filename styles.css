@@ -1,38 +1,11 @@
 *{box-sizing:border-box}body{margin:0;background:#f3f4f6;color:#111827;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{background:#111827;color:white;padding:34px 0}.wrap{max-width:1100px;margin:auto;padding:0 18px}.eyebrow{font-size:12px;letter-spacing:.16em;opacity:.7}h1{margin:6px 0;font-size:32px}.subtitle{margin:0;max-width:760px;color:#d1d5db}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:20px;padding-bottom:40px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;box-shadow:0 2px 8px #00000008}.wide{grid-column:1/-1}h2{font-size:18px;margin:0 0 14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-weight:600}input,select{width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:9px;padding:10px;background:white;font:inherit}button{border:0;border-radius:9px;padding:10px 14px;background:#111827;color:white;font-weight:700;cursor:pointer}button.secondary{background:#e5e7eb;color:#111827}.row{display:flex;gap:8px}.row input{flex:1}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.chip{border:1px solid #d1d5db;border-radius:999px;padding:6px 10px;background:#f9fafb}.chip button{background:transparent;color:#6b7280;padding:0 0 0 6px}.preset{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.hint{color:#6b7280;font-size:13px}.device-info{margin-top:12px;padding:12px;background:#f9fafb;border-radius:9px}.custom{margin-top:12px}.hidden{display:none}.check{display:flex;gap:8px;align-items:center;margin-top:14px}.check input{width:auto;margin:0}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.result{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.result.good{border-left:5px solid #16a34a}.result.warn{border-left:5px solid #ca8a04}.result.bad{border-left:5px solid #dc2626}.result-top{display:flex;justify-content:space-between;gap:10px}.freq{font-size:21px;font-weight:800}.score{font-weight:800}.meta{color:#4b5563;font-size:13px;margin-top:4px}.bar{height:7px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:9px}.bar>span{display:block;height:100%;background:#111827}.small-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:10px}.metric{background:#f9fafb;border-radius:8px;padding:8px}.metric b{display:block}.warn-text{color:#92400e}.bad-text{color:#991b1b}@media(max-width:760px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.form-grid,.small-grid{grid-template-columns:1fr}.section-head{align-items:flex-start;flex-direction:column}}
 
 /* --- V2: potencia/digital, scan import, conjuntos, flags de confianza --- */
-.row{align-items:center;flex-wrap:wrap}
-.power-input{flex:0 0 100px}
-.check.inline{width:auto;font-weight:600;font-size:14px;white-space:nowrap;margin:0;display:flex;align-items:center;gap:6px}
-.check.inline input{width:auto;margin:0}
-textarea{width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:9px;padding:10px;background:white;font:inherit;resize:vertical}
-.scan-import{margin-top:14px;border-top:1px dashed #e5e7eb;padding-top:12px}
-.scan-import summary{cursor:pointer;font-weight:700;font-size:14px;color:#111827}
-.scan-import .hint{margin-top:8px}
-.scan-import code{background:#f3f4f6;border-radius:4px;padding:1px 5px;font-size:12px}
-.inline-label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;white-space:nowrap}
-.inline-label input{width:76px;margin-top:0}
-.set-controls{gap:12px}
-.confidence-flag{display:inline-block;margin-top:4px;color:#92400e;font-weight:600;font-size:12.5px}
-.chip-scan{background:#eff6ff;border-color:#bfdbfe}
-.chip small{color:#6b7280;font-weight:400}
+.row{align-items:center;flex-wrap:wrap}.power-input{flex:0 0 100px}.check.inline{width:auto;font-weight:600;font-size:14px;white-space:nowrap;margin:0;display:flex;align-items:center;gap:6px}.check.inline input{width:auto;margin:0}textarea{width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:9px;padding:10px;background:white;font:inherit;resize:vertical}.scan-import{margin-top:14px;border-top:1px dashed #e5e7eb;padding-top:12px}.scan-import summary{cursor:pointer;font-weight:700;font-size:14px;color:#111827}.scan-import .hint{margin-top:8px}.scan-import code{background:#f3f4f6;border-radius:4px;padding:1px 5px;font-size:12px}.inline-label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;white-space:nowrap}.inline-label input{width:76px;margin-top:0}.set-controls{gap:12px}.confidence-flag{display:inline-block;margin-top:4px;color:#92400e;font-weight:600;font-size:12.5px}.chip-scan{background:#eff6ff;border-color:#bfdbfe}.chip small{color:#6b7280;font-weight:400}
 
 /* --- Ayuda contextual en "4. Parámetros del análisis" --- */
-.field{display:flex;flex-direction:column}
-.field-head{display:flex;align-items:center;gap:7px}
-.field-head label{margin:0}
-.check-row{display:flex;align-items:center;gap:7px;margin-top:14px;flex-wrap:wrap}
-.check-row .check{margin-top:0}
-
-details.help summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;border-radius:50%;background:#e5e7eb;color:#4b5563;font-size:12px;font-weight:800;font-style:italic;font-family:Georgia,"Times New Roman",serif;cursor:pointer;user-select:none;transition:background .15s ease,color .15s ease}
-details.help summary::-webkit-details-marker{display:none}
-details.help summary::marker{content:""}
-details.help summary:hover{background:#111827;color:#fff}
-details.help summary:focus-visible{outline:2px solid #111827;outline-offset:2px}
-details.help[open] summary{background:#111827;color:#fff}
-.help-panel{margin-top:8px;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid #111827;border-radius:0 10px 10px 0;font-size:12.5px;line-height:1.5;color:#374151}
-.help-panel p{margin:0 0 8px}.help-panel p:last-child{margin-bottom:0}.help-panel-title{font-weight:700;color:#111827;margin-bottom:6px!important}.help-panel ul{margin:0;padding-left:17px}.help-panel li{margin-bottom:4px}.help-panel li:last-child{margin-bottom:0}.help-panel strong{color:#111827}
-@media(max-width:760px){.field-head{flex-wrap:wrap}.check-row{justify-content:space-between}}
+.field{display:flex;flex-direction:column}.field-head{display:flex;align-items:center;gap:7px}.field-head label{margin:0}.check-row{display:flex;align-items:center;gap:7px;margin-top:14px;flex-wrap:wrap}.check-row .check{margin-top:0}
+details.help summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;border-radius:50%;background:#e5e7eb;color:#4b5563;font-size:12px;font-weight:800;font-style:italic;font-family:Georgia,"Times New Roman",serif;cursor:pointer;user-select:none;transition:background .15s ease,color .15s ease}details.help summary::-webkit-details-marker{display:none}details.help summary::marker{content:""}details.help summary:hover{background:#111827;color:#fff}details.help summary:focus-visible{outline:2px solid #111827;outline-offset:2px}details.help[open] summary{background:#111827;color:#fff}.help-panel{margin-top:8px;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid #111827;border-radius:0 10px 10px 0;font-size:12.5px;line-height:1.5;color:#374151}.help-panel p{margin:0 0 8px}.help-panel p:last-child{margin-bottom:0}.help-panel-title{font-weight:700;color:#111827;margin-bottom:6px!important}.help-panel ul{margin:0;padding-left:17px}.help-panel li{margin-bottom:4px}.help-panel li:last-child{margin-bottom:0}.help-panel strong{color:#111827}@media(max-width:760px){.field-head{flex-wrap:wrap}.check-row{justify-content:space-between}}
 
 /* --- Diagnóstico: fantasmas IM entre las propias frecuencias ocupadas --- */
 .self-conflicts{margin-top:10px}.conflict-ok{margin:0;font-size:13px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:8px 12px}.conflict-warn-title{margin:0 0 6px;font-size:13px;font-weight:700;color:#991b1b}.conflict-item{font-size:12.5px;line-height:1.5;color:#7f1d1d;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:7px 11px;margin-bottom:6px}.conflict-item:last-child{margin-bottom:0}.conflict-item b{color:#450a0a}
@@ -44,6 +17,7 @@ details.help[open] summary{background:#111827;color:#fff}
 .result.info{border-left:5px solid #2563eb}
 
 /* --- V2.1: perfiles de coordinación --- */
-.profile-badge{display:inline-block;margin-top:12px;padding:5px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;font-size:12px;font-weight:800;letter-spacing:.02em}
-.profile-notes{margin-top:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:9px;font-size:12.5px}
-.profile-notes p{margin:4px 0}.profile-notes p:first-child{margin-top:0}.profile-notes p:last-child{margin-bottom:0}
+.profile-badge{display:inline-block;margin-top:12px;padding:5px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;font-size:12px;font-weight:800;letter-spacing:.02em}.profile-notes{margin-top:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:9px;font-size:12.5px}.profile-notes p{margin:4px 0}.profile-notes p:first-child{margin-top:0}.profile-notes p:last-child{margin-bottom:0}
+
+/* --- UX: detalles IM colapsables en las tarjetas --- */
+.im-details{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:9px}.im-details>summary{cursor:pointer;user-select:none;color:#4b5563;font-size:13px;font-weight:700;padding:6px 8px;border-radius:7px;transition:background .15s ease,color .15s ease}.im-details>summary::-webkit-details-marker{color:#6b7280}.im-details>summary:hover{background:#f3f4f6;color:#111827}.im-details>summary:focus-visible{outline:2px solid #111827;outline-offset:2px}.im-details-content{margin-top:10px;padding:0 4px 4px}.im-details-content .im-table{margin-top:4px}.im-details-content .meta{margin-top:9px;padding:7px 9px;background:#f9fafb;border-radius:7px}
