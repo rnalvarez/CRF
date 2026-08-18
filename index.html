@@ -82,7 +82,25 @@
   </section>
 
   <section class="card">
-    <h2>4. Parámetros del análisis</h2>
+    <h2>4. Perfil de coordinación</h2>
+    <label for="coordinationProfile">Estrategia del motor
+      <select id="coordinationProfile">
+        <option value="robust">Robust (Seguro)</option>
+        <option value="standard" selected>Standard (Rodaje)</option>
+        <option value="dense">More Frequencies (Alta Densidad)</option>
+      </select>
+    </label>
+    <div class="profile-badge" id="coordinationProfileBadge">Standard (Rodaje)</div>
+    <p id="coordinationProfileDescription" class="hint">Perfil por defecto: solo IM3. Reduce el margen de guarda de canales un 30%.</p>
+    <div class="profile-notes">
+      <p><strong>Robust:</strong> mantiene el análisis matemático conservador actual, incluidos IM2–IM5.</p>
+      <p><strong>Standard:</strong> elimina IM5 y todos los órdenes que no sean IM3. Está pensado para un rodaje normal y es el perfil predeterminado.</p>
+      <p><strong>More Frequencies:</strong> elimina IM5 y los IM3 de 3 TX o más; solo conserva IM3 de dos transmisores (2A−B). Usa como guarda mínima el ancho de banda del receptor publicado por el perfil del equipo.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>5. Parámetros del análisis</h2>
     <div class="form-grid">
       <div class="field">
         <div class="field-head">
@@ -90,7 +108,7 @@
           <details class="help">
             <summary aria-label="Ayuda: Distancia mínima deseada">i</summary>
             <div class="help-panel">
-              <p>Define el espacio libre mínimo entre una frecuencia ocupada y una candidata. Depende del ancho de banda (Bandwidth) de la señal y la selectividad del receptor.</p>
+              <p>Define el espacio libre mínimo entre una frecuencia ocupada y una candidata. Depende del ancho de banda (Bandwidth) de la señal y la selectividad del receptor. El Perfil de coordinación puede modificar este valor automáticamente.</p>
               <p class="help-panel-title">Valores recomendados:</p>
               <ul>
                 <li><strong>0.300 - 0.400 MHz:</strong> Eventos con equipos de alta gama (ej. Sennheiser G4, Wisycom).</li>
@@ -163,13 +181,13 @@
         </div>
       </details>
     </div>
-    <p class="hint">Clasificación en 4 niveles — 🔴 CRÍTICO / 🟠 ADVERTENCIA / 🟡 REVISAR / 🟢 RECOMENDADO — según distancia real al producto IM y orden combinados, no un simple sí/no. Estos valores son criterios configurables del coordinador, no límites universales de RF.</p>
+    <p class="hint">La clasificación sigue distinguiendo 🔴 CRÍTICO / 🟠 ADVERTENCIA / 🟡 REVISAR / 🟢 RECOMENDADO. El Perfil de coordinación determina qué fenómenos matemáticos llegan al score; no pretende afirmar que un producto ignorado sea físicamente imposible.</p>
   </section>
 
   <section class="card wide">
     <div class="section-head">
       <div>
-        <h2>5. Recomendaciones</h2>
+        <h2>6. Recomendaciones</h2>
         <p id="status" class="hint">Agregá al menos una frecuencia ocupada.</p>
       </div>
       <button id="calculate">Calcular</button>
@@ -180,7 +198,7 @@
   <section class="card wide">
     <div class="section-head">
       <div>
-        <h2>6. Buscar un conjunto de frecuencias simultáneas</h2>
+        <h2>7. Buscar un conjunto de frecuencias simultáneas</h2>
         <p class="hint">Elige N frecuencias que funcionen bien entre sí y con lo ya ocupado — no solo cada una por separado (motor voraz + una pasada de mejora local, no ranking independiente).</p>
       </div>
       <div class="row set-controls">
@@ -193,10 +211,11 @@
 
   <section class="card wide">
     <h2>Metodología</h2>
-    <p>El motor calcula productos de intermodulación de órdenes 2 a 5 a partir de las frecuencias conocidas y penaliza candidatos que caen cerca de portadoras ocupadas o de productos calculados. Considera el paso de sintonización, la potencia RF declarada por vecino ocupado (más potencia exige más separación), la selectividad de canal adyacente del perfil cuando el fabricante la publica, y reduce (sin anular) la penalización IM cuando todos los aportantes de un producto son equipos digitales de espectro angosto.</p>
+    <p>El motor base sigue calculando productos de intermodulación matemáticos, pero el Perfil de coordinación decide cuáles son relevantes para la estrategia elegida. Robust conserva el screening completo; Standard pasa al score solamente IM3; More Frequencies pasa solamente IM3 de dos TX. También modifica la separación mínima entre portadoras para priorizar huecos funcionales cuando el espectro está saturado.</p>
     <p><strong>Importante:</strong> este coordinador es matemático/heurístico. No modela IP3, bloqueo del receptor, ganancia de antena, distancia real entre TX/RX, aislamiento entre antenas ni potencia efectiva radiada. Los perfiles marcados como "estimados" o "pendientes" dependen de la variante exacta del equipo o todavía no tienen datasheet público — confirmá contra tu unidad real. Ninguna recomendación acá reemplaza un scan RF en la locación ni determina legalidad/regulación.</p>
   </section>
 </main>
 <script src="app.js"></script>
+<script src="coordination-profiles.js"></script>
 </body>
 </html>
