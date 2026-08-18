@@ -1,0 +1,4 @@
+/* --- V2.1: perfiles de coordinación --- */
+.profile-badge{display:inline-block;margin-top:12px;padding:5px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;font-size:12px;font-weight:800;letter-spacing:.02em}
+.profile-notes{margin-top:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:9px;font-size:12.5px}
+.profile-notes p{margin:4px 0}.profile-notes p:first-child{margin-top:0}.profile-notes p:last-child{margin-bottom:0}
