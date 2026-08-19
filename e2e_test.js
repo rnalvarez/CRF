@@ -18,8 +18,14 @@ async function main() {
     return { json: async () => JSON.parse(text) };
   };
 
+  // calculate() (en app.js) delega el render de cada resultado en renderCandidateResults(),
+  // definida en render-accordion.js. En el browser real ambos <script> comparten el mismo
+  // scope léxico top-level (const/función), pero jsdom trata cada dom.window.eval() como un
+  // Script de vm aparte y no comparte los `const` top-level entre llamadas — por eso se
+  // concatenan y se evalúan juntos, replicando el comportamiento real de los <script> en serie.
   const appSrc = fs.readFileSync(path.join(__dirname, "app.js"), "utf8");
-  dom.window.eval(appSrc);
+  const accordionSrc = fs.readFileSync(path.join(__dirname, "render-accordion.js"), "utf8");
+  dom.window.eval(appSrc + "\n" + accordionSrc);
 
   // init() es async (hace fetch); esperamos a que termine
   await new Promise((r) => setTimeout(r, 200));
@@ -39,6 +45,14 @@ async function main() {
   doc.getElementById("calculate").onclick();
   const resultsHtml = doc.getElementById("results").innerHTML;
   check("calcular con THEOS produjo resultados", doc.getElementById("results").querySelectorAll(".result").length > 0);
+
+  // La lista de IM de cada card de resultado debe venir en un <details> desplegable,
+  // no como tabla siempre visible (ver render-accordion.js).
+  const resultCards = [...doc.getElementById("results").querySelectorAll(".result")];
+  check("todas las cards de resultado tienen su detalle IM en un <details>", resultCards.every(c => c.querySelector(":scope > details.im-details")));
+  check("ninguna card dejó la tabla de IM suelta fuera del <details>", resultCards.every(c => !c.querySelector(":scope > table.im-table")));
+  const summaries = resultCards.map(c => c.querySelector("summary")?.textContent || "");
+  check("el summary informa advertencias o marca limpio", summaries.every(s => /advertencias\)$/.test(s) || s.includes("Limpio")));
 
   // Agregar una frecuencia manual con potencia + digital
   doc.getElementById("occupiedFreq").value = "590.100";

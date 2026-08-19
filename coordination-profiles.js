@@ -36,30 +36,6 @@
   function updateProfileDescription(){const el=document.getElementById("coordinationProfileDescription"),badge=document.getElementById("coordinationProfileBadge"),p=profile();if(el)el.textContent=p.description;if(badge)badge.textContent=p.label;}
   function recalculate(){applyGuard();if(typeof window.calculate==="function")window.calculate();}
 
-  /* UX: collapse the long mathematical IM details inside candidate cards. */
-  function collapseCandidateDetails(){
-    const results=document.getElementById("results");if(!results)return;
-    results.querySelectorAll(".result").forEach(card=>{
-      if(card.querySelector(":scope > details.im-details"))return;
-      const table=card.querySelector(":scope > .im-table");
-      const reasonNodes=[...card.children].filter(el=>el.classList.contains("meta"));
-      const items=[];if(table)items.push(table);reasonNodes.forEach(el=>items.push(el));
-      const details=document.createElement("details");details.className="im-details";
-      const summary=document.createElement("summary");
-      summary.textContent=table?`📊 Ver detalle de cálculos (${table.querySelectorAll("tbody tr").length} advertencias)`:"✅ Ver cálculos (Limpio)";
-      details.appendChild(summary);
-      const content=document.createElement("div");content.className="im-details-content";items.forEach(el=>content.appendChild(el));details.appendChild(content);
-      card.appendChild(details);
-    });
-  }
-  function installAccordionWrapper(){
-    if(typeof window.calculate!=="function"||window.__crfAccordionWrapped)return;
-    const originalCalculate=window.calculate;
-    window.calculate=function(){const result=originalCalculate.apply(this,arguments);requestAnimationFrame(collapseCandidateDetails);return result;};
-    window.__crfAccordionWrapped=true;
-    const button=document.getElementById("calculate");if(button)button.onclick=window.calculate;
-  }
-
   async function bind(){
     const select=document.getElementById("coordinationProfile"),minInput=document.getElementById("minSeparation");
     if(!select||!minInput)return;
@@ -71,8 +47,7 @@
     if(deviceSelect)deviceSelect.addEventListener("change",async function(){await deviceDataReady;if(window.CRF_COORDINATION_STATE.profile==="dense")recalculate();});
     const originalCalculate=window.calculate;
     if(typeof originalCalculate==="function"){
-      window.calculate=function(){applyGuard();const result=originalCalculate.apply(this,arguments);requestAnimationFrame(collapseCandidateDetails);return result;};
-      window.__crfAccordionWrapped=true;
+      window.calculate=function(){applyGuard();return originalCalculate.apply(this,arguments);};
       document.getElementById("calculate").onclick=window.calculate;
     }
     await deviceDataReady;applyGuard();updateProfileDescription();

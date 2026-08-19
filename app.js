@@ -412,24 +412,7 @@ function calculate(){
   const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm,d,dangerZones))
     .sort((a,b)=>TIER_RANK[a.tier]-TIER_RANK[b.tier]||b.score-a.score)
     .slice(0,parseInt($("resultCount").value)||20);
-  $("results").innerHTML=results.length?results.map((r,i)=>{
-    const relevantHits=r.hits.filter(h=>h.tier!=="recomendado").sort((a,b)=>TIER_RANK[b.tier]-TIER_RANK[a.tier]||a.dist-b.dist);
-    const tableRows=relevantHits.map(h=>`<tr><td>${fmt(h.victim)}</td><td>IM${h.order}</td><td>${fmt(h.product)}</td><td>${fmt(h.dist)} MHz</td><td>${TIER_LABEL[h.tier]}${h.inRange===false?' <small>(fuera de rango)</small>':''}</td></tr>`).join("");
-    return `
-    <div class="result ${r.cls}">
-      <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${r.tierLabel}<br><small>${Math.round(r.score)}/100</small></div></div>
-      <div class="bar"><span style="width:${r.score}%"></span></div>
-      <div class="small-grid">
-        <div class="metric"><b>${fmt(r.minSep)} MHz</b>Separación mínima</div>
-        <div class="metric"><b>${r.orderCounts[2]}</b>Productos IM2</div>
-        <div class="metric"><b>${r.orderCounts[3]}</b>Productos IM3</div>
-        <div class="metric"><b>${r.orderCounts[4]}</b>Productos IM4</div>
-        <div class="metric"><b>${r.orderCounts[5]}</b>Productos IM5</div>
-      </div>
-      ${tableRows?`<table class="im-table"><thead><tr><th>Víctima</th><th>Orden</th><th>Producto</th><th>Distancia</th><th>Nivel</th></tr></thead><tbody>${tableRows}</tbody></table>`:"<div class='meta'>Sin producto IM relevante dentro del margen configurado.</div>"}
-      ${r.reasons.length?`<div class="meta">${r.reasons.join(" · ")}</div>`:""}
-    </div>`;
-  }).join(""):"<p class='bad-text'>No hay candidatos dentro del rango y las capacidades del dispositivo.</p>";
+  $("results").innerHTML=renderCandidateResults(results); // renderCandidateResults vive en render-accordion.js (se carga después de este script)
 }
 
 /* ---- Etapa 5: importar resultados de scan pegados como texto ---- */
