@@ -222,3 +222,42 @@ e2e (jsdom) ampliado a 24 checks (5 nuevos + 19 existentes). TODO OK, sin
 regresiones sobre ninguna ronda anterior.
 
 === Resultado global final: PASS (24/24 e2e) ===
+
+=== Auditoría de archivos + consolidación del acordeón de detalle IM ===
+
+Pedido: que la lista de IM de cada card de resultado sea desplegable, y
+chequear archivos de más en el repo. Antes de tocar nada se auditó el árbol
+completo contra qué referencia realmente index.html.
+
+HALLAZGO: existían DOS implementaciones del mismo acordeón, sin reconciliar.
+render-accordion.js + accordion.css se subieron el 18/8 16:43 (renderCandidateResult/
+renderCandidateResults, listos pero nunca importados ni llamados). 13 min
+después (16:56-16:57), otra sesión resolvió lo mismo por otro camino: DOM
+surgery post-render en coordination-profiles.js (collapseCandidateDetails +
+wrapper de window.calculate, dependiente de timing de scripts) más el CSS de
+.im-details pegado directo en styles.css. Confirmado con jsdom + server local
+que la vía DOM-surgery SÍ funcionaba, pero dejaba código muerto
+(installAccordionWrapper, nunca invocado) y dos fuentes de verdad para el
+mismo render. styles-profile-additions.css: mismo patrón, subido 15:56, con
+su contenido (.profile-badge/.profile-notes) ya pegado en styles.css 5 min
+antes (15:51) — huérfano desde que se subió.
+
+CAMBIO: calculate() en app.js ahora delega el render de cada resultado en
+renderCandidateResults() (render-accordion.js, cargado después de app.js en
+index.html). Se eliminaron collapseCandidateDetails/installAccordionWrapper
+de coordination-profiles.js (la única función que sigue haciendo falta ahí es
+applyGuard() antes de calcular). accordion.css y styles-profile-additions.css
+se borraron del repo: contenido redundante, ya vivía en styles.css, ninguno
+estaba linkeado en el <head>.
+
+PRUEBAS (e2e_test.js, jsdom):
+1. Las 24 checks preexistentes (motor IM, clasificación, auto-conflictos,
+   danger zones, in/fuera de rango): sin regresiones, PASS.
+2. Todas las cards de resultado tienen su detalle IM dentro de un
+   <details class="im-details">: PASS.
+3. Ninguna card deja la tabla im-table suelta fuera del <details>: PASS.
+4. El <summary> informa la cantidad de advertencias o marca "Limpio": PASS.
+
+e2e ampliado a 27 checks (3 nuevos + 24 existentes). TODO OK.
+
+=== Resultado global final: PASS (27/27 e2e) ===
