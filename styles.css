@@ -1,23 +1,210 @@
-*{box-sizing:border-box}body{margin:0;background:#f3f4f6;color:#111827;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}header{background:#111827;color:white;padding:34px 0}.wrap{max-width:1100px;margin:auto;padding:0 18px}.eyebrow{font-size:12px;letter-spacing:.16em;opacity:.7}h1{margin:6px 0;font-size:32px}.subtitle{margin:0;max-width:760px;color:#d1d5db}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:20px;padding-bottom:40px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;box-shadow:0 2px 8px #00000008}.wide{grid-column:1/-1}h2{font-size:18px;margin:0 0 14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-weight:600}input,select{width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:9px;padding:10px;background:white;font:inherit}button{border:0;border-radius:9px;padding:10px 14px;background:#111827;color:white;font-weight:700;cursor:pointer}button.secondary{background:#e5e7eb;color:#111827}.row{display:flex;gap:8px}.row input{flex:1}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.chip{border:1px solid #d1d5db;border-radius:999px;padding:6px 10px;background:#f9fafb}.chip button{background:transparent;color:#6b7280;padding:0 0 0 6px}.preset{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.hint{color:#6b7280;font-size:13px}.device-info{margin-top:12px;padding:12px;background:#f9fafb;border-radius:9px}.custom{margin-top:12px}.hidden{display:none}.check{display:flex;gap:8px;align-items:center;margin-top:14px}.check input{width:auto;margin:0}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.result{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.result.good{border-left:5px solid #16a34a}.result.warn{border-left:5px solid #ca8a04}.result.bad{border-left:5px solid #dc2626}.result-top{display:flex;justify-content:space-between;gap:10px}.freq{font-size:21px;font-weight:800}.score{font-weight:800}.meta{color:#4b5563;font-size:13px;margin-top:4px}.bar{height:7px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:9px}.bar>span{display:block;height:100%;background:#111827}.small-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:10px}.metric{background:#f9fafb;border-radius:8px;padding:8px}.metric b{display:block}.warn-text{color:#92400e}.bad-text{color:#991b1b}@media(max-width:760px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.form-grid,.small-grid{grid-template-columns:1fr}.section-head{align-items:flex-start;flex-direction:column}}
+/* ============================================================
+   CRF — Coordinador de Frecuencias UHF
+   Lenguaje visual: panel de rack / instrumento de RF de campo.
+   Fondo grafito (no negro puro) porque este tipo de herramienta
+   se usa a menudo en un handheld, de noche, en un set — un fondo
+   oscuro es también una decisión práctica, no solo estética.
+   Los 5 colores de tier NO son decorativos: son el mismo
+   semáforo crítico/advertencia/revisar/recomendado/fuera-de-rango
+   que ya calcula app.js, llevado a un lenguaje de luces
+   indicadoras de equipo. El violeta de acento es el color que
+   un analizador de espectro usa para marcar el pico/marker
+   activo — el único color que no pertenece a ningún tier.
+   Fuentes: enlazadas desde index.html (preconnect + stylesheet),
+   no via @import acá, para que no bloqueen el primer render.
+   ============================================================ */
 
-/* --- V2: potencia/digital, scan import, conjuntos, flags de confianza --- */
-.row{align-items:center;flex-wrap:wrap}.power-input{flex:0 0 100px}.check.inline{width:auto;font-weight:600;font-size:14px;white-space:nowrap;margin:0;display:flex;align-items:center;gap:6px}.check.inline input{width:auto;margin:0}textarea{width:100%;margin-top:6px;border:1px solid #d1d5db;border-radius:9px;padding:10px;background:white;font:inherit;resize:vertical}.scan-import{margin-top:14px;border-top:1px dashed #e5e7eb;padding-top:12px}.scan-import summary{cursor:pointer;font-weight:700;font-size:14px;color:#111827}.scan-import .hint{margin-top:8px}.scan-import code{background:#f3f4f6;border-radius:4px;padding:1px 5px;font-size:12px}.inline-label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;white-space:nowrap}.inline-label input{width:76px;margin-top:0}.set-controls{gap:12px}.confidence-flag{display:inline-block;margin-top:4px;color:#92400e;font-weight:600;font-size:12.5px}.chip-scan{background:#eff6ff;border-color:#bfdbfe}.chip small{color:#6b7280;font-weight:400}
+:root{
+  --bg:#14171b;
+  --panel:#1b1f25;
+  --panel-2:#232932;
+  --panel-3:#2a3139;
+  --border:#2d333d;
+  --border-soft:#252b33;
+  --text:#edeff3;
+  --text-dim:#8e97a6;
+  --text-faint:#5b6472;
+  --accent:#b27cf0;
+  --accent-ink:#241a33;
+  --critico:#f2554d;
+  --advertencia:#f0913d;
+  --revisar:#efcb4a;
+  --recomendado:#3fce8e;
+  --info:#5b9ef2;
+  --font-display:'IBM Plex Sans Condensed',system-ui,sans-serif;
+  --font-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --radius:11px;
+  --radius-sm:7px;
+}
 
-/* --- Ayuda contextual en "4. Parámetros del análisis" --- */
-.field{display:flex;flex-direction:column}.field-head{display:flex;align-items:center;gap:7px}.field-head label{margin:0}.check-row{display:flex;align-items:center;gap:7px;margin-top:14px;flex-wrap:wrap}.check-row .check{margin-top:0}
-details.help summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;border-radius:50%;background:#e5e7eb;color:#4b5563;font-size:12px;font-weight:800;font-style:italic;font-family:Georgia,"Times New Roman",serif;cursor:pointer;user-select:none;transition:background .15s ease,color .15s ease}details.help summary::-webkit-details-marker{display:none}details.help summary::marker{content:""}details.help summary:hover{background:#111827;color:#fff}details.help summary:focus-visible{outline:2px solid #111827;outline-offset:2px}details.help[open] summary{background:#111827;color:#fff}.help-panel{margin-top:8px;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-left:3px solid #111827;border-radius:0 10px 10px 0;font-size:12.5px;line-height:1.5;color:#374151}.help-panel p{margin:0 0 8px}.help-panel p:last-child{margin-bottom:0}.help-panel-title{font-weight:700;color:#111827;margin-bottom:6px!important}.help-panel ul{margin:0;padding-left:17px}.help-panel li{margin-bottom:4px}.help-panel li:last-child{margin-bottom:0}.help-panel strong{color:#111827}@media(max-width:760px){.field-head{flex-wrap:wrap}.check-row{justify-content:space-between}}
+/* --- Base --- */
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.wrap{max-width:1100px;margin:auto;padding:0 18px}
+::selection{background:var(--accent);color:var(--accent-ink)}
 
-/* --- Diagnóstico: fantasmas IM entre las propias frecuencias ocupadas --- */
-.self-conflicts{margin-top:10px}.conflict-ok{margin:0;font-size:13px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:8px 12px}.conflict-warn-title{margin:0 0 6px;font-size:13px;font-weight:700;color:#991b1b}.conflict-item{font-size:12.5px;line-height:1.5;color:#7f1d1d;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:7px 11px;margin-bottom:6px}.conflict-item:last-child{margin-bottom:0}.conflict-item b{color:#450a0a}
+/* --- Header: la "unidad superior" del rack --- */
+header{background:var(--panel);border-bottom:1px solid var(--border);padding:28px 0 26px}
+.eyebrow{font:600 11.5px/1 var(--font-mono);letter-spacing:.16em;color:var(--accent);text-transform:uppercase}
+h1{margin:10px 0 8px;font:700 28px/1.15 var(--font-display);letter-spacing:.01em;color:var(--text)}
+.subtitle{margin:0;max-width:640px;color:var(--text-dim);font-size:14px}
 
-/* --- Tabla de detalle IM (víctima/orden/producto/distancia/nivel) --- */
-.im-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}.im-table th{text-align:left;font-weight:600;color:#6b7280;padding:4px 8px;border-bottom:1px solid #e5e7eb}.im-table td{padding:4px 8px;border-bottom:1px solid #f3f4f6;font-variant-numeric:tabular-nums}.im-table tr:last-child td{border-bottom:none}
+/* --- Layout --- */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:20px;padding-bottom:56px}
+.wide{grid-column:1/-1}
 
-/* --- Nivel informativo (fuera de rango): ni bueno ni malo, un dato aparte --- */
-.result.info{border-left:5px solid #2563eb}
+/* --- .card = un módulo del panel --- */
+.card{background:var(--panel);border:1px solid var(--border);border-top-color:var(--panel-3);border-radius:var(--radius);padding:18px 18px 20px}
+.ch-tag{display:block;font:600 10.5px/1 var(--font-mono);letter-spacing:.14em;color:var(--text-faint);text-transform:uppercase;margin-bottom:7px}
+h2{font:700 15px/1.3 var(--font-display);letter-spacing:.03em;text-transform:uppercase;margin:0 0 14px;color:var(--text)}
 
-/* --- V2.1: perfiles de coordinación --- */
-.profile-badge{display:inline-block;margin-top:12px;padding:5px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;font-size:12px;font-weight:800;letter-spacing:.02em}.profile-notes{margin-top:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:9px;font-size:12.5px}.profile-notes p{margin:4px 0}.profile-notes p:first-child{margin-top:0}.profile-notes p:last-child{margin-bottom:0}
+/* --- Formularios --- */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-weight:600;font-size:13.5px;color:var(--text-dim)}
+input,select,textarea{width:100%;margin-top:6px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 11px;background:var(--panel-2);color:var(--text);font:inherit}
+input[type=number]{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+textarea{resize:vertical}
+input::placeholder,textarea::placeholder{color:var(--text-faint)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* --- UX: detalles IM colapsables en las tarjetas --- */
-.im-details{margin-top:12px;border-top:1px solid #e5e7eb;padding-top:9px}.im-details>summary{cursor:pointer;user-select:none;color:#4b5563;font-size:13px;font-weight:700;padding:6px 8px;border-radius:7px;transition:background .15s ease,color .15s ease}.im-details>summary::-webkit-details-marker{color:#6b7280}.im-details>summary:hover{background:#f3f4f6;color:#111827}.im-details>summary:focus-visible{outline:2px solid #111827;outline-offset:2px}.im-details-content{margin-top:10px;padding:0 4px 4px}.im-details-content .im-table{margin-top:4px}.im-details-content .meta{margin-top:9px;padding:7px 9px;background:#f9fafb;border-radius:7px}
+button{border:0;border-radius:var(--radius-sm);padding:11px 16px;background:var(--accent);color:var(--accent-ink);font:600 14px var(--font-body);cursor:pointer;transition:filter .15s ease,transform .05s ease}
+button:hover{filter:brightness(1.08)}
+button:active{transform:translateY(1px)}
+button.secondary{background:var(--panel-2);color:var(--text);border:1px solid var(--border)}
+button.secondary:hover{filter:none;background:var(--panel-3)}
+
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row input{flex:1}
+.power-input{flex:0 0 100px}
+.check{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:13.5px;color:var(--text-dim)}
+.check input{width:auto;margin:0}
+.check.inline{width:auto;font-weight:600;font-size:14px;white-space:nowrap;margin:0}
+.hint{color:var(--text-dim);font-size:13px;line-height:1.5}
+
+/* --- Chips de frecuencias ocupadas --- */
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.chip{border:1px solid var(--border);border-radius:999px;padding:6px 8px 6px 12px;background:var(--panel-2);font-family:var(--font-mono);font-size:13.5px;display:inline-flex;align-items:center;gap:2px}
+.chip small{font-family:var(--font-body);color:var(--text-dim);font-weight:400}
+.chip button{background:transparent;color:var(--text-faint);padding:2px 6px;border-radius:999px;font-size:15px;line-height:1}
+.chip button:hover{background:var(--panel-3);color:var(--critico);filter:none}
+.chip-scan{background:rgba(91,158,242,.1);border-color:rgba(91,158,242,.35)}
+.preset{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
+/* --- Dispositivo / info --- */
+.device-info{margin-top:12px;padding:12px 13px;background:var(--panel-2);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6}
+.device-info small{color:var(--text-dim)}
+.custom{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)}
+.hidden{display:none}
+.confidence-flag{display:inline-block;margin-top:4px;color:var(--advertencia);font-weight:600;font-size:12.5px}
+
+/* --- Perfil de coordinación --- */
+.profile-badge{display:inline-block;margin-top:12px;padding:5px 11px;border-radius:999px;background:rgba(178,124,240,.14);border:1px solid rgba(178,124,240,.4);color:var(--accent);font:700 11.5px/1 var(--font-mono);letter-spacing:.04em;text-transform:uppercase}
+.profile-notes{margin-top:10px;padding:11px 13px;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-dim)}
+.profile-notes p{margin:5px 0}
+.profile-notes p:first-child{margin-top:0}
+.profile-notes p:last-child{margin-bottom:0}
+.profile-notes strong{color:var(--text)}
+
+/* --- Ayuda contextual (i) --- */
+.field{display:flex;flex-direction:column}
+.field-head{display:flex;align-items:center;gap:7px}
+.field-head label{margin:0}
+.check-row{display:flex;align-items:center;gap:7px;margin-top:14px;flex-wrap:wrap}
+.check-row .check{margin-top:0}
+details.help summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;border-radius:50%;background:var(--panel-3);color:var(--text-dim);font-size:12px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer;user-select:none;transition:background .15s ease,color .15s ease}
+details.help summary::-webkit-details-marker{display:none}
+details.help summary::marker{content:""}
+details.help summary:hover{background:var(--accent);color:var(--accent-ink)}
+details.help[open] summary{background:var(--accent);color:var(--accent-ink)}
+.help-panel{margin-top:8px;padding:12px 14px;background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:12.5px;line-height:1.55;color:var(--text-dim)}
+.help-panel p{margin:0 0 8px}
+.help-panel p:last-child{margin-bottom:0}
+.help-panel-title{font-weight:700;color:var(--text);margin-bottom:6px!important}
+.help-panel ul{margin:0;padding-left:17px}
+.help-panel li{margin-bottom:4px}
+.help-panel strong{color:var(--text)}
+
+/* --- Import de scan --- */
+.scan-import{margin-top:14px;border-top:1px dashed var(--border);padding-top:12px}
+.scan-import summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--text)}
+.scan-import .hint{margin-top:8px}
+.scan-import code{background:var(--panel-3);border-radius:4px;padding:1px 5px;font-family:var(--font-mono);font-size:12px}
+.inline-label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;white-space:nowrap;color:var(--text-dim)}
+.inline-label input{width:80px;margin-top:0}
+.set-controls{gap:12px}
+
+/* --- Diagnóstico de auto-conflicto --- */
+.self-conflicts{margin-top:10px}
+.conflict-ok{margin:0;font-size:13px;color:var(--recomendado);background:rgba(63,206,142,.1);border:1px solid rgba(63,206,142,.3);border-radius:var(--radius-sm);padding:8px 12px}
+.conflict-warn-title{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--critico)}
+.conflict-item{font-size:12.5px;line-height:1.55;color:#f4b3af;background:rgba(242,85,77,.09);border:1px solid rgba(242,85,77,.28);border-radius:var(--radius-sm);padding:7px 11px;margin-bottom:6px}
+.conflict-item:last-child{margin-bottom:0}
+.conflict-item b{color:#fff}
+
+/* --- Sección Recomendaciones / Buscar conjunto --- */
+.section-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+
+/* --- Resultado: cada candidata es una "lectura de instrumento" --- */
+.result{border:1px solid var(--border);background:var(--panel-2);border-radius:var(--radius-sm);padding:14px 15px;margin:10px 0;border-left:4px solid var(--border)}
+.result.good{border-left-color:var(--recomendado)}
+.result.caution{border-left-color:var(--revisar)}
+.result.warn{border-left-color:var(--advertencia)}
+.result.bad{border-left-color:var(--critico)}
+.result.info{border-left-color:var(--info)}
+.result-top{display:flex;justify-content:space-between;gap:10px}
+.freq{font:600 21px var(--font-mono);letter-spacing:-.01em;color:var(--text)}
+.score{font:700 13px var(--font-body);text-align:right;white-space:nowrap}
+.score small{font-family:var(--font-mono);color:var(--text-dim);font-weight:500}
+.meta{color:var(--text-dim);font-size:13px;margin-top:4px}
+.bar{height:6px;background:var(--panel-3);border-radius:99px;overflow:hidden;margin-top:10px}
+.bar>span{display:block;height:100%;background:var(--text-faint)}
+.result.good .bar>span{background:var(--recomendado)}
+.result.caution .bar>span{background:var(--revisar)}
+.result.warn .bar>span{background:var(--advertencia)}
+.result.bad .bar>span{background:var(--critico)}
+.result.info .bar>span{background:var(--info)}
+.small-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:7px;margin-top:10px}
+.metric{background:var(--panel);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:7px 8px;font-size:12px;color:var(--text-dim)}
+.metric b{display:block;font:600 14px var(--font-mono);color:var(--text)}
+.warn-text{color:var(--advertencia)}
+.bad-text{color:var(--critico)}
+
+/* --- Usar esta frecuencia: agrega el candidato a "ocupadas" sin scrollear --- */
+.use-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:11px;padding:9px 12px;background:transparent;border:1px solid var(--recomendado);color:var(--recomendado);font:600 13px var(--font-body);border-radius:var(--radius-sm)}
+.use-btn:hover{filter:none;background:rgba(63,206,142,.1)}
+.use-btn:disabled{opacity:.55;border-color:var(--border);color:var(--text-faint);cursor:default;background:transparent}
+
+/* --- Tabla de detalle IM --- */
+.im-table{width:100%;border-collapse:collapse;margin-top:8px;font-family:var(--font-mono);font-size:12px}
+.im-table th{text-align:left;font-weight:600;color:var(--text-faint);padding:4px 8px;border-bottom:1px solid var(--border);font-family:var(--font-body);text-transform:uppercase;font-size:10.5px;letter-spacing:.06em}
+.im-table td{padding:4px 8px;border-bottom:1px solid var(--border-soft);font-variant-numeric:tabular-nums;color:var(--text-dim)}
+.im-table tr:last-child td{border-bottom:none}
+
+/* --- Detalle IM colapsable --- */
+.im-details{margin-top:12px;border-top:1px solid var(--border);padding-top:9px}
+.im-details>summary{cursor:pointer;user-select:none;color:var(--text-dim);font-size:13px;font-weight:600;padding:6px 8px;border-radius:var(--radius-sm);transition:background .15s ease,color .15s ease}
+.im-details>summary::-webkit-details-marker{color:var(--text-faint)}
+.im-details>summary:hover{background:var(--panel-3);color:var(--text)}
+.im-details-content{margin-top:10px;padding:0 4px 4px}
+.im-details-content .im-table{margin-top:4px}
+.im-details-content .meta{margin-top:9px;padding:7px 9px;background:var(--panel);border-radius:var(--radius-sm)}
+
+/* --- Toast: confirmación in-place al usar una frecuencia --- */
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);background:var(--panel-3);border:1px solid var(--border);color:var(--text);font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:40;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast strong{color:var(--recomendado);font-family:var(--font-mono)}
+
+@media(prefers-reduced-motion:reduce){
+  button,.toast,.im-details>summary,details.help summary{transition:none}
+}
+
+@media(max-width:760px){
+  .grid{grid-template-columns:1fr}
+  .wide{grid-column:auto}
+  .form-grid,.small-grid{grid-template-columns:1fr}
+  .section-head{align-items:flex-start;flex-direction:column}
+  .toast{bottom:16px;font-size:13px;padding:10px 16px;max-width:calc(100% - 32px);white-space:normal;text-align:center}
+  h1{font-size:24px}
+}

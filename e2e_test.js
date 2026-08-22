@@ -127,8 +127,33 @@ async function main() {
 
   check("el label del candidato con 4 métricas incluye IM2", doc.getElementById("results").innerHTML.includes("Productos IM2"));
 
-  // --- Los 5 casos pedidos para inRange/fuera_de_rango, contra las funciones reales (no una copia) ---
   const w = window;
+
+  // --- Botón "usar esta frecuencia": agregar a ocupadas sin volver al formulario de arriba ---
+  check("cada card de resultado tiene el botón usar-esta-frecuencia", [...doc.getElementById("results").querySelectorAll(".result")].every(c => c.querySelector(".use-btn")));
+  const occupiedBefore = doc.getElementById("occupiedList").querySelectorAll(".chip").length;
+  w.addCandidateAsOccupied(599.999);
+  check("usar-esta-frecuencia agrega un chip nuevo a ocupadas", doc.getElementById("occupiedList").querySelectorAll(".chip").length === occupiedBefore + 1);
+  check("usar-esta-frecuencia muestra el toast de confirmación", doc.getElementById("toast").classList.contains("show") && doc.getElementById("toast").innerHTML.includes("599.999"));
+
+  // --- Dispositivo personalizado: antes de cargar datos no genera candidatos; al completar
+  // mínimo/máximo/paso se promueve en caliente a candidateModel "continuous" (mismo motor
+  // que cualquier perfil continuo real) y calcular empieza a funcionar. ---
+  doc.getElementById("deviceSelect").value = "custom";
+  doc.getElementById("deviceSelect").dispatchEvent(new window.Event("change"));
+  check("al elegir personalizado se muestra el formulario de rango", !doc.getElementById("customDevice").classList.contains("hidden"));
+  doc.getElementById("calculate").onclick();
+  check("personalizado sin completar no genera candidatos y avisa", doc.getElementById("results").innerHTML.includes("rango operativo del dispositivo personalizado"));
+  doc.getElementById("customName").value = "Shure ULXD de prueba";
+  doc.getElementById("customMin").value = "470";
+  doc.getElementById("customMax").value = "608";
+  doc.getElementById("customStep").value = "0.025";
+  w.syncCustomDevice();
+  check("completar mín/máx/paso promueve el perfil a candidateModel continuous", doc.getElementById("deviceInfo").innerHTML.includes("Capacidad declarada"));
+  doc.getElementById("calculate").onclick();
+  check("personalizado completo genera candidatos al calcular", doc.getElementById("results").querySelectorAll(".result").length > 0);
+
+  // --- Los 5 casos pedidos para inRange/fuera_de_rango, contra las funciones reales (no una copia) ---
   {
     const min=560,max=570,rr={min:min-2,max:max+2};
     const occ=[{freq:300,powerMw:null,digital:false},{freq:280,powerMw:null,digital:false},{freq:250,powerMw:null,digital:false}];

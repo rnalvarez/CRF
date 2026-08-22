@@ -261,3 +261,62 @@ PRUEBAS (e2e_test.js, jsdom):
 e2e ampliado a 27 checks (3 nuevos + 24 existentes). TODO OK.
 
 === Resultado global final: PASS (27/27 e2e) ===
+
+=== Rediseño visual + dispositivo personalizado + "usar esta frecuencia" ===
+
+Pedido: (1) el dispositivo personalizado no dejaba cargar un rango operativo,
+(2) estética "básica"/"tosca", (3) en mobile hay que bajar hasta Recomendaciones
+y volver a subir a Frecuencias ocupadas para marcar una candidata como en uso.
+
+HALLAZGO (1): #customDevice existía en el HTML desde antes pero no estaba
+referenciado en ningún .js — ni para mostrarlo, ni para leer sus campos, ni
+para popularlo. data/devices.json ya documentaba la intención en sus propias
+notes: "Pensado para ingresar min/max/paso manualmente en una próxima etapa;
+por ahora no genera candidatos." Confirmado con grep sobre todo el repo: cero
+referencias a customDevice fuera de index.html.
+
+CAMBIO (1): formulario dentro de #customDevice (nombre, paso, mínimo, máximo).
+syncCustomDevice() en app.js promueve en caliente el perfil "custom" a
+candidateModel:"continuous" apenas los 3 valores son válidos — reutiliza el
+mismo generateCandidates()/renderDeviceInfo() que cualquier dispositivo
+continuo real, sin ramas nuevas en el motor. Mensaje de bloqueo contextual
+(deviceNotConfiguredMsg) mientras no se completó.
+
+CAMBIO (2): styles.css reescrito completo. Paleta oscura tipo panel de rack
+(fondo grafito, no negro puro — motivo práctico además de estético: esto se
+usa de noche, en un set, en la mano) con tokens en :root. Tipografía IBM Plex
+Sans/Sans Condensed/Mono (la mono va en todo input numérico y dato de
+frecuencia). Los 5 tiers ahora tienen 5 colores reales — antes "revisar" y
+"advertencia" compartían la misma clase CSS (.warn) y se veían idénticos
+pese a tener texto y emoji distintos; ahora revisar tiene su propia clase
+(.caution). La barra de score de cada card también se tiñe según el tier.
+Cada card de sección lleva un "CH.0X" en mono como eyebrow, evocando
+etiquetado de equipo — el mismo criterio que ya usa el propio numerado
+existente, solo hecho explícito visualmente.
+
+CAMBIO (3): botón "✓ Usar esta frecuencia" en cada card de Recomendaciones
+(render-accordion.js). addCandidateAsOccupied() en app.js hace exactamente lo
+mismo que cargar la frecuencia a mano arriba (agrega a occupied, ordena,
+recalcula) pero sin salir de donde ya está la atención del usuario; showToast()
+confirma in-place ("✓ X MHz agregada a ocupadas") así no hace falta scrollear
+para verificar que se cargó.
+
+PRUEBAS (e2e_test.js, jsdom) — 34 checks en total:
+1. Las 27 preexistentes: sin regresiones, PASS.
+2. Cada card de resultado tiene el botón usar-esta-frecuencia: PASS.
+3. Click en usar-esta-frecuencia agrega un chip nuevo a ocupadas: PASS.
+4. Y muestra el toast de confirmación con la frecuencia correcta: PASS.
+5. Elegir "personalizado" muestra el formulario: PASS.
+6. Sin completarlo, calcular no rompe y avisa con mensaje contextual: PASS.
+7. Completar mín/máx/paso promueve el perfil (deviceInfo pasa a mostrar
+   "Capacidad declarada..."): PASS.
+8. Con el perfil completo, calcular genera candidatos: PASS.
+
+Además, verificado aparte con un server local + JSDOM.fromURL(runScripts:
+"dangerously") — carga real de los 3 <script src> en orden, incluida la
+envoltura de calculate() en coordination-profiles.js — para confirmar que el
+flujo funciona igual que en un browser real y no solo en el harness de eval:
+dispositivo personalizado completo generó 20 resultados; click real en
+usar-esta-frecuencia (a través del wrapper) sumó un chip y mostró el toast.
+
+=== Resultado global final: PASS (34/34 e2e) ===

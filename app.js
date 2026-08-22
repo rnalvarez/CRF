@@ -25,6 +25,9 @@ async function init(){
   }
   sel.addEventListener("change",renderDeviceInfo);
   renderDeviceInfo();
+  ["customName","customStep","customMin","customMax"].forEach(id=>{
+    $(id)?.addEventListener("input",syncCustomDevice);
+  });
   $("addFreq").onclick=addOccupied;
   $("occupiedFreq").addEventListener("keydown",e=>{if(e.key==="Enter")addOccupied()});
   $("clearAll").onclick=()=>{state.occupied=[];renderOccupied();calculate()};
@@ -114,8 +117,67 @@ function renderOccupied(){
 }
 function removeFreq(i){state.occupied.splice(i,1);renderOccupied();calculate()}
 
+function deviceNotConfiguredMsg(d){
+  return d.candidateModel==="custom"
+    ? "Completá el rango operativo del dispositivo personalizado (mínimo, máximo y paso) en la sección 3."
+    : "Este perfil todavía no tiene un modelo de candidatos configurado (ver nota arriba). Elegí otro dispositivo o cargá los datos del fabricante.";
+}
+
+/* El perfil "custom" arranca como candidateModel:"custom" (no genera nada,
+   ver data/devices.json). En cuanto min/máx/paso son válidos se lo promueve
+   en caliente a candidateModel:"continuous" — así reutiliza EXACTAMENTE el
+   mismo generateCandidates()/renderDeviceInfo() que cualquier dispositivo
+   continuo real, sin ramas nuevas en el resto del motor. */
+function syncCustomDevice(){
+  const base=state.devices.custom;if(!base)return;
+  const name=$("customName")?.value.trim();
+  const step=parseFloat($("customStep")?.value);
+  const min=parseFloat($("customMin")?.value);
+  const max=parseFloat($("customMax")?.value);
+  const valid=Number.isFinite(min)&&Number.isFinite(max)&&Number.isFinite(step)&&step>0&&max>min;
+  base.name=name||"Dispositivo personalizado";
+  base.kind="Custom";
+  if(valid){
+    base.candidateModel="continuous";
+    base.min=min;base.max=max;base.step=step;
+    base.confidence=null;
+    base.notes="Perfil personalizado — rango ingresado manualmente, no verificado contra datasheet.";
+  }else{
+    base.candidateModel="custom";
+    base.confidence="pending";
+    base.notes="Perfil sin datos cargados todavía. Completá mínimo, máximo y paso arriba para que genere candidatos.";
+  }
+  const statusEl=$("customDeviceStatus");
+  if(statusEl)statusEl.textContent=valid?`Listo: ${fmt(min)}–${fmt(max)} MHz, paso ${fmt(step)} MHz.`:"Completá mínimo, máximo y paso para que este perfil empiece a generar candidatos.";
+  if($("deviceSelect").value==="custom")renderDeviceInfo();
+}
+
+function showToast(msg){
+  const el=$("toast");if(!el)return;
+  el.innerHTML=msg;
+  el.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(()=>el.classList.remove("show"),2600);
+}
+
+/* Agregar directo desde una card de Recomendaciones: el motivo de existir de
+   esta función es evitar el viaje "bajar a resultados -> subir a ocupadas ->
+   bajar de nuevo" — un tap acá hace exactamente lo mismo que cargar la
+   frecuencia arriba a mano, pero sin salir de donde ya está la atención. */
+function addCandidateAsOccupied(freq){
+  if(!state.occupied.some(x=>Math.abs(x.freq-freq)<0.0001)){
+    state.occupied.push({freq,powerMw:null,digital:false,source:"manual"});
+    state.occupied.sort((a,b)=>a.freq-b.freq);
+  }
+  renderOccupied();
+  calculate();
+  showToast(`✓ <strong>${fmt(freq)} MHz</strong> agregada a ocupadas`);
+}
+
 function renderDeviceInfo(){
-  const d=state.devices[$("deviceSelect").value];
+  const val=$("deviceSelect").value;
+  $("customDevice").classList.toggle("hidden",val!=="custom");
+  const d=state.devices[val];
   let html=`<strong>${d.name}</strong><br><span>${d.kind}</span>`;
   if(d.confidence&&d.confidence!=="verified"){
     const txt=d.confidence==="pending"
@@ -386,7 +448,7 @@ function scoreCandidate(cand,occupied,rangeMin,rangeMax,opts,allIm,device,danger
   const tierToClsLabel={
     recomendado:{cls:"good",label:"RECOMENDADA"},
     fuera_de_rango:{cls:"info",label:"FUERA DE RANGO"},
-    revisar:{cls:"warn",label:"REVISAR"},
+    revisar:{cls:"caution",label:"REVISAR"},
     advertencia:{cls:"warn",label:"ADVERTENCIA"},
     critico:{cls:"bad",label:"CRÍTICO"}
   };
@@ -402,7 +464,7 @@ function calculate(){
   if(!state.occupied.length){$("results").innerHTML="<p class='hint'>Cargá al menos una frecuencia ocupada para generar recomendaciones.</p>";return}
   const d=state.devices[$("deviceSelect").value];
   if(d.candidateModel!=="channels"&&d.candidateModel!=="continuous"){
-    $("results").innerHTML="<p class='bad-text'>Este perfil todavía no tiene un modelo de candidatos configurado (ver nota arriba). Elegí otro dispositivo o cargá los datos del fabricante.</p>";
+    $("results").innerHTML=`<p class='bad-text'>${deviceNotConfiguredMsg(d)}</p>`;
     return;
   }
   let candidates=generateCandidates(d,min,max).filter(c=>!state.occupied.some(f=>Math.abs(f.freq-c.freq)<1e-6));
@@ -460,7 +522,7 @@ function calculateSet(){
   if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min){$("setResults").innerHTML="<p class='bad-text'>Rango inválido.</p>";return}
   const d=state.devices[$("deviceSelect").value];
   if(d.candidateModel!=="channels"&&d.candidateModel!=="continuous"){
-    $("setResults").innerHTML="<p class='bad-text'>Este perfil todavía no tiene un modelo de candidatos configurado.</p>";
+    $("setResults").innerHTML=`<p class='bad-text'>${deviceNotConfiguredMsg(d)}</p>`;
     return;
   }
   const basePool=generateCandidates(d,min,max).filter(c=>!state.occupied.some(f=>Math.abs(f.freq-c.freq)<1e-6));

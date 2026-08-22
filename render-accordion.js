@@ -41,6 +41,7 @@ function renderCandidateResult(r, i) {
         <div class="metric"><b>${r.orderCounts[4]}</b>Productos IM4</div>
         <div class="metric"><b>${r.orderCounts[5]}</b>Productos IM5</div>
       </div>
+      <button type="button" class="use-btn" onclick="addCandidateAsOccupied(${r.cand.freq})">✓ Usar esta frecuencia</button>
       <details class="im-details">
         <summary>${detailSummary}</summary>
         <div class="im-details-content">${detailContent}</div>

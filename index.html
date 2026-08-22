@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#14171b">
   <title>RF Coordinator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,7 +21,7 @@
 
 <main class="wrap grid">
   <section class="card">
-    <h2>1. Rango de trabajo</h2>
+    <h2><span class="ch-tag">CH.01</span>Rango de trabajo</h2>
     <div class="form-grid">
       <label>Inicio (MHz)<input id="rangeMin" type="number" step="0.001" value="550"></label>
       <label>Fin (MHz)<input id="rangeMax" type="number" step="0.001" value="600"></label>
@@ -46,7 +49,7 @@
   </section>
 
   <section class="card">
-    <h2>2. Frecuencias ya ocupadas</h2>
+    <h2><span class="ch-tag">CH.02</span>Frecuencias ya ocupadas</h2>
     <div class="row">
       <input id="occupiedFreq" type="number" step="0.001" placeholder="Ej. 566.200">
       <input id="occupiedPower" type="number" step="1" min="0" placeholder="mW (opc.)" class="power-input">
@@ -73,16 +76,26 @@
   </section>
 
   <section class="card">
-    <h2>3. Dispositivo que querés agregar</h2>
+    <h2><span class="ch-tag">CH.03</span>Dispositivo que querés agregar</h2>
     <label>Perfil
       <select id="deviceSelect"></select>
     </label>
     <div id="deviceInfo" class="device-info"></div>
-    <div id="customDevice" class="custom hidden"></div>
+    <div id="customDevice" class="custom hidden">
+      <div class="form-grid">
+        <label>Nombre<input id="customName" type="text" placeholder="Ej. Shure ULXD (propio)"></label>
+        <label>Paso de sintonía (MHz)<input id="customStep" type="number" step="0.005" min="0.001" placeholder="0.025"></label>
+      </div>
+      <div class="form-grid" style="margin-top:12px">
+        <label>Mínimo (MHz)<input id="customMin" type="number" step="0.001" placeholder="Ej. 470"></label>
+        <label>Máximo (MHz)<input id="customMax" type="number" step="0.001" placeholder="Ej. 608"></label>
+      </div>
+      <p class="hint" id="customDeviceStatus" style="margin-top:10px">Completá mínimo, máximo y paso para que este perfil empiece a generar candidatos.</p>
+    </div>
   </section>
 
   <section class="card">
-    <h2>4. Perfil de coordinación</h2>
+    <h2><span class="ch-tag">CH.04</span>Perfil de coordinación</h2>
     <label for="coordinationProfile">Estrategia del motor
       <select id="coordinationProfile">
         <option value="robust">Robust (Seguro)</option>
@@ -100,7 +113,7 @@
   </section>
 
   <section class="card">
-    <h2>5. Parámetros del análisis</h2>
+    <h2><span class="ch-tag">CH.05</span>Parámetros del análisis</h2>
     <div class="form-grid">
       <div class="field">
         <div class="field-head">
@@ -187,7 +200,7 @@
   <section class="card wide">
     <div class="section-head">
       <div>
-        <h2>6. Recomendaciones</h2>
+        <h2><span class="ch-tag">CH.06</span>Recomendaciones</h2>
         <p id="status" class="hint">Agregá al menos una frecuencia ocupada.</p>
       </div>
       <button id="calculate">Calcular</button>
@@ -198,7 +211,7 @@
   <section class="card wide">
     <div class="section-head">
       <div>
-        <h2>7. Buscar un conjunto de frecuencias simultáneas</h2>
+        <h2><span class="ch-tag">CH.07</span>Buscar un conjunto de frecuencias simultáneas</h2>
         <p class="hint">Elige N frecuencias que funcionen bien entre sí y con lo ya ocupado — no solo cada una por separado (motor voraz + una pasada de mejora local, no ranking independiente).</p>
       </div>
       <div class="row set-controls">
@@ -210,11 +223,12 @@
   </section>
 
   <section class="card wide">
-    <h2>Metodología</h2>
+    <h2><span class="ch-tag">Nota</span>Metodología</h2>
     <p>El motor base sigue calculando productos de intermodulación matemáticos, pero el Perfil de coordinación decide cuáles son relevantes para la estrategia elegida. Robust conserva el screening completo; Standard pasa al score solamente IM3; More Frequencies pasa solamente IM3 de dos TX. También modifica la separación mínima entre portadoras para priorizar huecos funcionales cuando el espectro está saturado.</p>
     <p><strong>Importante:</strong> este coordinador es matemático/heurístico. No modela IP3, bloqueo del receptor, ganancia de antena, distancia real entre TX/RX, aislamiento entre antenas ni potencia efectiva radiada. Los perfiles marcados como "estimados" o "pendientes" dependen de la variante exacta del equipo o todavía no tienen datasheet público — confirmá contra tu unidad real. Ninguna recomendación acá reemplaza un scan RF en la locación ni determina legalidad/regulación.</p>
   </section>
 </main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
 <script src="render-accordion.js"></script>
 <script src="coordination-profiles.js"></script>

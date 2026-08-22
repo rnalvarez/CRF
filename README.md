@@ -26,12 +26,17 @@ Coordinar múltiples receptores UHF a mano es propenso a error: hay que dejar se
 
 ## Catálogo de dispositivos
 
-27 perfiles en `data/devices.json` — Sennheiser EW 100 G2/G3/G4 (por variante regional), BOYA BY-WM8 Pro, Deity THEOS, Wisycom MTP40S, Saramonic K9, Lectrosonics DCHT, RØDELink II, más un perfil personalizable. Cada uno declara su modelo de generación de candidatos (bancos de canales o barrido continuo) y un flag de confianza — `verified` / `estimate` / `pending` — cuando el dato depende de la variante exacta del equipo o todavía no hay datasheet público.
+27 perfiles en `data/devices.json` — Sennheiser EW 100 G2/G3/G4 (por variante regional), BOYA BY-WM8 Pro, Deity THEOS, Wisycom MTP40S, Saramonic K9, Lectrosonics DCHT, RØDELink II, más un perfil **personalizable**: al elegirlo se abre un formulario (nombre, mínimo, máximo, paso) que promueve el perfil en caliente a un dispositivo de rango continuo apenas los tres valores son válidos — mismo motor de candidatos que cualquier equipo real, sin esperar a cargarlo en el JSON. Cada perfil declara además su modelo de generación de candidatos (bancos de canales o barrido continuo) y un flag de confianza — `verified` / `estimate` / `pending` — cuando el dato depende de la variante exacta del equipo o todavía no hay datasheet público.
 
 ## Otras herramientas
 
 - **Importar resultado de scan**: pegar texto de un analizador de espectro (cualquier separador: coma, espacio, tab) y cargar automáticamente como ocupadas las frecuencias que superen un umbral en dBm.
 - **Detalle de IM colapsable**: cada resultado muestra su tabla de víctima/orden/producto/distancia/nivel dentro de un `<details>` desplegable (`render-accordion.js`), con la cantidad de advertencias resumida en el título.
+- **Usar esta frecuencia**: cada card de Recomendaciones tiene un botón que agrega esa candidata a "ocupadas" y recalcula al toque, sin volver a cargar el formulario de arriba — pensado para el uso típico en smartphone, eligiendo una frecuencia por vez para cada equipo.
+
+## Diseño
+
+Paleta oscura (panel de RF de campo, no un tema oscuro genérico): fondo grafito en vez de negro puro, pensado para usarse de noche en un set sin generar reflejo. Tipografía IBM Plex Sans/Sans Condensed/Mono — la monoespaciada va en todo input numérico y dato de frecuencia. Los 5 niveles de clasificación (crítico/advertencia/revisar/recomendado/fuera de rango) tienen 5 colores propios y tiñen tanto el borde como la barra de score de cada card.
 
 ## Stack
 
