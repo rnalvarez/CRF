@@ -320,3 +320,35 @@ dispositivo personalizado completo generó 20 resultados; click real en
 usar-esta-frecuencia (a través del wrapper) sumó un chip y mostró el toast.
 
 === Resultado global final: PASS (34/34 e2e) ===
+
+=== "Usar frecuencias" en Buscar conjunto ===
+
+Pedido: en "Buscar conjunto", al calcular, no había forma de sumar el grupo
+encontrado a "frecuencias ya ocupadas" (sí existía ya para Recomendaciones,
+sección aparte, con addCandidateAsOccupied uno por uno).
+
+CAMBIO: botón "✓ Usar estas N frecuencias" arriba de la lista de resultados
+de calculateSet(). addSetAsOccupied() suma TODO el conjunto de una sola vez
+(no una por una, como en Recomendaciones) — tiene sentido como grupo, porque
+el conjunto se optimizó para funcionar en simultáneo, no candidato por
+candidato. Confirma con el mismo toast que ya usa addCandidateAsOccupied, y
+además deja el propio botón deshabilitado ("✓ Agregadas a ocupadas") ya que
+acá calculateSet() no se vuelve a correr sola — a diferencia de Recomendaciones,
+donde el resultado usado desaparece solo de la lista al recalcular. Los chips
+que vienen de un conjunto quedan etiquetados "(conjunto)", mismo criterio que
+ya existía para los que vienen de importar un scan.
+
+PRUEBAS (e2e_test.js) — 39 checks en total, 5 nuevos:
+1. El botón existe en #setResults (como hijo directo, no confundido con los
+   botones "usar esta frecuencia" de cada card individual dentro): PASS.
+2. Click agrega las 5 frecuencias del conjunto encontrado: PASS.
+3. El chip resultante queda etiquetado "conjunto": PASS.
+4. Se muestra el toast de confirmación: PASS.
+5. El botón queda deshabilitado tras usarse: PASS.
+
+Nota de harness: con runScripts:"outside-only" los onclick="..." insertados
+vía innerHTML no se compilan a una función invocable en .onclick (jsdom no
+los procesa en ese modo) — por eso el test llama la función real directo,
+mismo patrón que ya se usaba para addCandidateAsOccupied.
+
+=== Resultado global final: PASS (39/39 e2e) ===

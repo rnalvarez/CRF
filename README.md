@@ -32,7 +32,7 @@ Coordinar múltiples receptores UHF a mano es propenso a error: hay que dejar se
 
 - **Importar resultado de scan**: pegar texto de un analizador de espectro (cualquier separador: coma, espacio, tab) y cargar automáticamente como ocupadas las frecuencias que superen un umbral en dBm.
 - **Detalle de IM colapsable**: cada resultado muestra su tabla de víctima/orden/producto/distancia/nivel dentro de un `<details>` desplegable (`render-accordion.js`), con la cantidad de advertencias resumida en el título.
-- **Usar esta frecuencia**: cada card de Recomendaciones tiene un botón que agrega esa candidata a "ocupadas" y recalcula al toque, sin volver a cargar el formulario de arriba — pensado para el uso típico en smartphone, eligiendo una frecuencia por vez para cada equipo.
+- **Usar esta frecuencia**: cada card de Recomendaciones tiene un botón que agrega esa candidata a "ocupadas" y recalcula al toque, sin volver a cargar el formulario de arriba — pensado para el uso típico en smartphone, eligiendo una frecuencia por vez para cada equipo. Buscar conjunto tiene el equivalente a nivel grupo: un botón que suma las N frecuencias encontradas de una sola vez, ya que ahí tiene sentido usarlas juntas.
 
 ## Diseño
 

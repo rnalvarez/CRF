@@ -31,6 +31,7 @@ async function main() {
   await new Promise((r) => setTimeout(r, 200));
 
   const doc = window.document;
+  const w = window;
   const results = [];
   const check = (name, cond) => results.push({ name, ok: !!cond });
 
@@ -91,6 +92,21 @@ async function main() {
   check("buscar conjunto de 5 produjo 5 resultados", doc.getElementById("setResults").querySelectorAll(".result").length === 5);
   console.log("   tiempo búsqueda de conjunto (n=5):", (t1 - t0) + "ms");
 
+  // --- Botón "usar estas N frecuencias" en Buscar conjunto: agrega el conjunto entero de una,
+  // no una por una (tiene sentido usarlo como grupo, ya que se buscaron para funcionar juntas).
+  // (nota: con runScripts:"outside-only" los onclick="..." insertados vía innerHTML no quedan
+  // compilados como .onclick invocable -- por eso se llama la función real directo, como ya
+  // se hace un poco más abajo con addCandidateAsOccupied). ---
+  const setUseBtn = doc.querySelector("#setResults > .use-btn");
+  check("setResults tiene el botón de usar todo el conjunto", !!setUseBtn);
+  const occBeforeSet = doc.getElementById("occupiedList").querySelectorAll(".chip").length;
+  const setFreqs = [...doc.querySelectorAll("#setResults .result .freq")].map(el => parseFloat(el.textContent));
+  w.addSetAsOccupied(setFreqs, setUseBtn);
+  check("usar conjunto agrega las 5 frecuencias a ocupadas", doc.getElementById("occupiedList").querySelectorAll(".chip").length === occBeforeSet + 5);
+  check("el chip agregado por conjunto queda etiquetado (conjunto)", doc.getElementById("occupiedList").innerHTML.includes("conjunto"));
+  check("usar conjunto muestra el toast de confirmación", doc.getElementById("toast").innerHTML.includes("5 frecuencias del conjunto"));
+  check("el botón de usar conjunto queda deshabilitado tras usarse", setUseBtn.disabled === true);
+
   // Diagnóstico de auto-conflicto: 4 canales BOYA en progresión aritmética
   // (cada uno a 4 pasos del siguiente) generan fantasmas IM3/IM4/IM5 exactos
   // sobre sí mismos. Caso real reportado y verificado en el chat con RAM.
@@ -126,8 +142,6 @@ async function main() {
   check("el texto del diagnóstico no dice CRÍTICO para este caso (20kHz reales = advertencia/alto)", postHtml.includes("ALTO") && !postHtml.includes("CRÍTICO"));
 
   check("el label del candidato con 4 métricas incluye IM2", doc.getElementById("results").innerHTML.includes("Productos IM2"));
-
-  const w = window;
 
   // --- Botón "usar esta frecuencia": agregar a ocupadas sin volver al formulario de arriba ---
   check("cada card de resultado tiene el botón usar-esta-frecuencia", [...doc.getElementById("results").querySelectorAll(".result")].every(c => c.querySelector(".use-btn")));

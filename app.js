@@ -109,8 +109,9 @@ function renderSelfConflicts(){
 
 function renderOccupied(){
   $("occupiedList").innerHTML=state.occupied.map((o,i)=>{
-    const tags=[o.powerMw?`${o.powerMw}mW`:null,o.digital?"digital":null,o.source==="scan"?"scan":null].filter(Boolean).join(" · ");
-    return `<span class="chip${o.source==="scan"?" chip-scan":""}">${fmt(o.freq)} MHz${tags?` <small>(${tags})</small>`:""} <button title="Eliminar" onclick="removeFreq(${i})">×</button></span>`;
+    const srcTag=o.source==="scan"?"scan":o.source==="set"?"conjunto":null;
+    const tags=[o.powerMw?`${o.powerMw}mW`:null,o.digital?"digital":null,srcTag].filter(Boolean).join(" · ");
+    return `<span class="chip${srcTag?" chip-scan":""}">${fmt(o.freq)} MHz${tags?` <small>(${tags})</small>`:""} <button title="Eliminar" onclick="removeFreq(${i})">×</button></span>`;
   }).join("");
   $("status").textContent=state.occupied.length?`${state.occupied.length} frecuencia(s) ocupada(s).`:"Agregá al menos una frecuencia ocupada.";
   renderSelfConflicts();
@@ -172,6 +173,25 @@ function addCandidateAsOccupied(freq){
   renderOccupied();
   calculate();
   showToast(`✓ <strong>${fmt(freq)} MHz</strong> agregada a ocupadas`);
+}
+
+/* Mismo motivo que addCandidateAsOccupied, pero para "Buscar conjunto": ahí
+   el resultado tiene sentido como grupo (se buscaron juntas a propósito), así
+   que se suman todas de una — no tiene mucho sentido usar solo una parte de
+   un conjunto que se optimizó para funcionar en simultáneo. */
+function addSetAsOccupied(freqs,btn){
+  let added=0;
+  for(const f of freqs){
+    if(!state.occupied.some(x=>Math.abs(x.freq-f)<0.0001)){
+      state.occupied.push({freq:f,powerMw:null,digital:false,source:"set"});
+      added++;
+    }
+  }
+  state.occupied.sort((a,b)=>a.freq-b.freq);
+  renderOccupied();
+  calculate();
+  showToast(added?`✓ ${added} frecuencia${added===1?"":"s"} del conjunto agregada${added===1?"":"s"} a ocupadas`:"Ya estaban todas en ocupadas");
+  if(btn){btn.textContent="✓ Agregadas a ocupadas";btn.disabled=true;}
 }
 
 function renderDeviceInfo(){
@@ -576,6 +596,7 @@ function calculateSet(){
 
   $("setResults").innerHTML=`
     <p class="meta">Conjunto de ${picks.length} frecuencia(s)${minMutual!==null?` · separación mínima interna ${fmt(minMutual)} MHz`:""} · peor score individual ${Math.round(worst)}/100</p>
+    <button type="button" class="use-btn" onclick="addSetAsOccupied([${picks.map(p=>p.freq).join(",")}],this)">✓ Usar estas ${picks.length} frecuencias</button>
     ${finalScored.map(r=>`
     <div class="result ${r.cls}">
       <div class="result-top"><div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div><div class="score">${r.tierLabel}<br><small>${Math.round(r.score)}/100</small></div></div>
