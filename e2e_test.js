@@ -233,24 +233,32 @@ async function main() {
   check("ejemplo identifica G4 y BOYA",doc.getElementById("wfChannels").innerHTML.includes("G4 01")&&doc.getElementById("wfChannels").innerHTML.includes("BOYA 02"));
 
   const ch=[...doc.querySelectorAll("#wfChannels .wf-channel")][0];
-  const edit=ch?.querySelector(".wf-channel-actions .secondary");
-  if(edit){
-    const m=edit.getAttribute("onclick").match(/openEdit\('([^']+)'\)/);
-    window.CRF_WORKFLOW.startBackup(m[1],0);
-    const b=doc.querySelector("#results .backup-btn");
-    check("backup sale desde las recomendaciones",!!b);
-    if(b){
-      const bf=parseFloat(b.closest(".result").querySelector(".freq").textContent);
+  const backupSelects=[...doc.querySelectorAll("#wfChannels .backup-frequency-select")];
+  check("hay selectores directos para BKP 1/BKP 2",backupSelects.length===4);
+  const firstBackupSelect=backupSelects[0];
+  check("el selector de backup contiene frecuencias calculadas",firstBackupSelect&&firstBackupSelect.options.length>1);
+  if(firstBackupSelect&&firstBackupSelect.options.length>1){
+    const primaryBefore=parseFloat(ch.querySelector(".wf-channel-freq").textContent);
+    const backupFreq=parseFloat(firstBackupSelect.options[1].value);
+    firstBackupSelect.value=firstBackupSelect.options[1].value;
+    firstBackupSelect.onchange();
+    check("al elegir una frecuencia se carga como Backup 1",
+      doc.querySelector("#wfChannels .backup-frequency-select").value===backupFreq.toFixed(3));
+    check("la frecuencia backup elegida no entra en occupied",
+      !doc.getElementById("occupiedList").innerHTML.includes(backupFreq.toFixed(3)+" MHz"));
+    window.CRF_WORKFLOW.save();
+    const savedBackup=JSON.parse(window.localStorage.getItem("crf.rfProject.v3"));
+    const editButton=ch.querySelector(".wf-channel-actions .secondary");
+    const channelId=editButton?.getAttribute("onclick")?.match(/openEdit\('([^']+)'\)/)?.[1];
+    const savedChannel=savedBackup.locations.flatMap(x=>x.channels||[]).find(x=>x.id===channelId);
+    check("backup queda persistido en el proyecto",!!savedChannel&&Number(savedChannel.backups?.[0])===backupFreq);
+    if(channelId){
       window.confirm=()=>true;
-      window.CRF_WORKFLOW.useAsBackup(bf);
-      check("backup no entra en occupied",!doc.getElementById("occupiedList").innerHTML.includes(bf.toFixed(3)+" MHz"));
-      window.CRF_WORKFLOW.save();
-      const savedBackup=JSON.parse(window.localStorage.getItem("crf.rfProject.v3"));
-      const savedChannel=savedBackup.locations.flatMap(x=>x.channels||[]).find(x=>x.id===m[1]);
-      check("backup queda persistido en el proyecto",!!savedChannel&&Number(savedChannel.backups?.[0])===bf);
-      window.CRF_WORKFLOW.activateBackup(m[1],0);
-      check("activar backup convierte la frecuencia en principal",doc.getElementById("occupiedList").innerHTML.includes(bf.toFixed(3)+" MHz")&&doc.getElementById("wfChannels").innerHTML.includes(bf.toFixed(3)));
-      check("al activar backup la frecuencia principal anterior queda como backup",doc.getElementById("wfChannels").innerHTML.includes("BKP 1 "+(559.990).toFixed(3)));
+      window.CRF_WORKFLOW.activateBackup(channelId,0);
+      check("activar backup convierte la frecuencia en principal",
+        doc.getElementById("occupiedList").innerHTML.includes(backupFreq.toFixed(3)+" MHz"));
+      check("la frecuencia principal anterior queda como backup",
+        doc.getElementById("wfChannels").innerHTML.includes(primaryBefore.toFixed(3)));
     }
   }
 
