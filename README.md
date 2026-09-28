@@ -34,6 +34,14 @@ Coordinar múltiples receptores UHF a mano es propenso a error: hay que dejar se
 - **Detalle de IM colapsable**: cada resultado muestra su tabla de víctima/orden/producto/distancia/nivel dentro de un `<details>` desplegable (`render-accordion.js`), con la cantidad de advertencias resumida en el título.
 - **Usar esta frecuencia**: cada card de Recomendaciones tiene un botón que agrega esa candidata a "ocupadas" y recalcula al toque, sin volver a cargar el formulario de arriba — pensado para el uso típico en smartphone, eligiendo una frecuencia por vez para cada equipo. Buscar conjunto tiene el equivalente a nivel grupo: un botón que suma las N frecuencias encontradas de una sola vez, ya que ahí tiene sentido usarlas juntas.
 
+## Flujo de trabajo para rodaje
+
+La capa de workflow se apoya sobre el motor existente sin alterar sus cálculos. Permite guardar un proyecto de RF con varias locaciones/regiones independientes, relacionar cada frecuencia ocupada con su dispositivo, canal o identificador y función, registrar potencia/digital y hasta dos frecuencias de respaldo por canal. La coordinación puede guardarse automáticamente en el navegador, exportarse/importarse como archivo JSON y convertirse en una hoja RF imprimible. El botón **FIELD MODE** presenta una vista de operación simplificada para smartphone con canal, dispositivo, frecuencia principal y backups. Las frecuencias agregadas desde Recomendaciones pueden pasar directamente a esa ficha si se carga el identificador del canal; si no, siguen funcionando como frecuencias ocupadas anónimas para el motor.
+
+Las regiones son independientes: cada una conserva su rango operativo, margen, frecuencias ocupadas y asignaciones. Esto permite preparar varias locaciones dentro del mismo rodaje sin mezclar sus coordinaciones. El sistema no introduce un segundo mecanismo de bloqueo: una frecuencia asignada pasa a formar parte de las frecuencias ocupadas que utiliza el motor, manteniendo una única fuente operativa para el cálculo.
+
+El escaneo sigue siendo opcional y se mantiene como entrada de frecuencias detectadas; el rango operativo continúa definiéndose explícitamente en CRF. La hoja RF y el FIELD MODE muestran la coordinación cargada, no una medición de espectro en tiempo real.
+
 ## Diseño
 
 Paleta oscura (panel de RF de campo, no un tema oscuro genérico): fondo grafito en vez de negro puro, pensado para usarse de noche en un set sin generar reflejo. Tipografía IBM Plex Sans/Sans Condensed/Mono — la monoespaciada va en todo input numérico y dato de frecuencia. Los 5 niveles de clasificación (crítico/advertencia/revisar/recomendado/fuera de rango) tienen 5 colores propios y tiñen tanto el borde como la barra de score de cada card.
