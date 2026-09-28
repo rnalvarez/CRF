@@ -75,7 +75,7 @@
   function activate(id){capture();W.active=id;loadRegion(region());syncUI();schedule()}
   function clearForm(){q("wfAssignFreq").value="";q("wfChannel").value="";q("wfRole").value="";q("wfPower").value="";q("wfBackup1").value="";q("wfBackup2").value="";q("wfAssignNotes").value="";syncUI()}
   function addAssignment(freqOverride){
-    const r=region(),d=dev(q("deviceSelect").value),freq=Number(freqOverride??q("wfAssignFreq").value),ch=q("wfChannel").value.trim();
+    const r=region(),d=dev(deviceId()),freq=Number(freqOverride??q("wfAssignFreq").value),ch=q("wfChannel").value.trim();
     if(!Number.isFinite(freq)||!ch)return toast("Completa frecuencia y canal / identificador");
     const p=Number(q("wfPower").value);
     const a={id:uid(),deviceId:deviceId(),deviceName:d?.name||"Dispositivo",channel:ch,role:q("wfRole").value.trim(),frequency:freq,
