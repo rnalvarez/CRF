@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#14171b">
-  <title>RF Coordinator</title>
+  <title>CRF · Coordinador de frecuencias UHF</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -20,129 +20,54 @@
 </header>
 
 <main class="wrap grid">
-<section class="card wide workflow-card">
-  <div class="workflow-head">
-    <div>
-      <span class="ch-tag">RF PROJECT</span>
-      <h2>Proyecto de rodaje</h2>
-      <p class="hint">Organiza equipos, canales, backups y locaciones sin cambiar el cálculo RF.</p>
+
+<section class="card wide project-bar">
+  <div class="project-bar-top">
+    <div class="project-identity">
+      <span class="ch-tag">CRF · PROYECTO</span>
+      <input id="wfProjectName" class="project-name" type="text" placeholder="Nombre del rodaje">
+      <div class="project-location-line">
+        <label>Locación
+          <select id="wfRegionSelect"></select>
+        </label>
+        <button id="wfNewRegion" type="button" class="secondary">+ Nueva locación</button>
+      </div>
     </div>
-    <div class="workflow-actions">
-      <button id="wfFieldMode" type="button">FIELD MODE</button>
+    <div class="project-actions">
+      <span id="wfSaveStatusTop" class="project-status">Guardado local</span>
+      <button id="wfSave" type="button">Guardar</button>
+      <button id="wfExport" type="button" class="secondary">Exportar</button>
       <button id="wfSheet" type="button" class="secondary">Hoja RF</button>
-      <button id="wfSave" type="button" class="secondary">Guardar</button>
+      <button id="wfFieldMode" type="button">FIELD MODE</button>
     </div>
   </div>
-
-  <div class="workflow-project-grid">
-    <label>Proyecto / rodaje
-      <input id="wfProjectName" type="text" placeholder="Ej. Largometraje XYZ">
-    </label>
-    <label>Producción / referencia
-      <input id="wfProduction" type="text" placeholder="Ej. Producción · Unidad 1">
-    </label>
-    <label>Fecha
-      <input id="wfProjectDate" type="date">
-    </label>
-    <label class="workflow-span-2">Notas
-      <input id="wfProjectNotes" type="text" placeholder="Observaciones generales del rodaje">
-    </label>
-  </div>
-
-  <div class="workflow-region-bar">
-    <div class="workflow-region-select">
-      <label>Locación / región
-        <select id="wfRegionSelect"></select>
+  <details class="project-details">
+    <summary>Datos del proyecto</summary>
+    <div class="project-details-grid">
+      <label>Producción / referencia
+        <input id="wfProduction" type="text" placeholder="Producción · Unidad 1">
+      </label>
+      <label>Fecha
+        <input id="wfProjectDate" type="date">
+      </label>
+      <label>Ubicación de la locación
+        <input id="wfRegionLocation" type="text" placeholder="Set / dirección / referencia">
+      </label>
+      <label>Nombre visible de la locación
+        <input id="wfRegionName" type="text" placeholder="Casa · Interior">
+      </label>
+      <label class="project-notes">Notas
+        <textarea id="wfProjectNotes" rows="2" placeholder="Observaciones del rodaje"></textarea>
       </label>
     </div>
-    <label>Nombre
-      <input id="wfRegionName" type="text" placeholder="Set principal">
-    </label>
-    <label>Ubicación
-      <input id="wfRegionLocation" type="text" placeholder="Dirección / locación">
-    </label>
-    <div class="workflow-actions region-actions">
-      <button id="wfNewRegion" type="button" class="secondary">+ Nueva locación</button>
-      <button id="wfDeleteRegion" type="button" class="secondary">Eliminar</button>
-    </div>
-  </div>
-
-  <div class="workflow-assignment-wrap">
-    <div class="workflow-subhead">
-      <div>
-        <h3>Canales en uso</h3>
-        <p class="hint">Cada frecuencia queda vinculada a un dispositivo, canal/identificador, función y backups.</p>
-      </div>
-      <span id="wfSaveStatus" class="workflow-save-status">Guardado local</span>
-    </div>
-    <div id="wfAssignments" class="wf-assignments"></div>
-
-    <div id="wfAssignmentForm" class="wf-form">
-      <div class="workflow-form-label">Agregar canal a esta locación</div>
-      <div class="workflow-target"><label>Dispositivo<select id="wfDeviceSelect"></select></label></div>
-      <div class="workflow-project-grid compact">
-        <label>Canal / identificador
-          <input id="wfChannel" type="text" placeholder="LAV 01 · JUAN">
-        </label>
-        <label>Función
-          <input id="wfRole" type="text" placeholder="Lav / IFB / cámara">
-        </label>
-        <label>Frecuencia (MHz)
-          <input id="wfAssignFreq" type="number" step="0.001" placeholder="574.200">
-        </label>
-        <label>Potencia (mW)
-          <input id="wfPower" type="number" step="1" min="0" placeholder="Opcional">
-        </label>
-        <label>Backup 1 (MHz)
-          <input id="wfBackup1" type="number" step="0.001" placeholder="Opcional">
-        </label>
-        <label>Backup 2 (MHz)
-          <input id="wfBackup2" type="number" step="0.001" placeholder="Opcional">
-        </label>
-        <label class="workflow-span-2">Notas del canal
-          <input id="wfAssignNotes" type="text" placeholder="Actor, cámara, observaciones...">
-        </label>
-      </div>
-      <label class="check workflow-digital"><input id="wfDigital" type="checkbox"> digital</label>
-      <div class="workflow-actions">
-        <button id="wfAssignButton" type="button">Agregar canal</button>
-        <button id="wfAssignClear" type="button" class="secondary">Limpiar</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="workflow-tools">
-    <div>
-      <strong>Proyecto guardado en este dispositivo</strong>
-      <span class="hint">Se guarda automáticamente mientras trabajás.</span>
-    </div>
-    <div class="workflow-actions">
-      <button id="wfExport" type="button" class="secondary">Exportar proyecto</button>
+    <div class="project-details-actions">
       <button id="wfImport" type="button" class="secondary">Importar proyecto</button>
+      <button id="wfDeleteRegion" type="button" class="secondary">Eliminar locación actual</button>
       <input id="wfFile" type="file" accept=".json,.crf.json,application/json" hidden>
     </div>
-  </div>
+  </details>
 </section>
-
-<div id="fieldMode" class="field-mode" aria-hidden="true">
-  <div class="field-screen">
-    <div class="field-screen-head">
-      <div>
-        <div class="field-kicker">CRF · FIELD MODE</div>
-        <h2 id="fieldProjectName">Mi rodaje</h2>
-        <p id="fieldRegionName" class="field-region-name">Locación</p>
-      </div>
-      <div class="workflow-actions">
-        <button id="fieldSheet" type="button" class="secondary">Hoja RF</button>
-        <button id="fieldClose" type="button">Salir</button>
-      </div>
-    </div>
-    <div id="fieldAssignments" class="field-assignments"></div>
-    <p class="field-footnote">Vista operativa de la coordinación cargada. No representa medición en tiempo real del espectro.</p>
-  </div>
-</div>
-
-  <section class="card">
+<section class="card">
     <h2><span class="ch-tag">CH.01</span>Rango de trabajo</h2>
     <div class="form-grid">
       <label>Inicio (MHz)<input id="rangeMin" type="number" step="0.001" value="550"></label>
@@ -169,16 +94,33 @@
     </div>
     <p class="hint">Es el rango que querés que utilice el algoritmo. No evalúa legalidad/regulación.</p>
   </section>
-
-  <section class="card">
-    <h2><span class="ch-tag">CH.02</span>Frecuencias ya ocupadas</h2>
+<section class="card">
+    <h2><span class="ch-tag">CH.03</span>Dispositivo que querés agregar</h2>
+    <label>Perfil
+      <select id="deviceSelect"></select>
+    </label><p class="hint">Este es el equipo que CRF coordina ahora. Al usar una frecuencia, queda asociada automáticamente a este dispositivo.</p>
+    <div id="deviceInfo" class="device-info"></div>
+    <div id="customDevice" class="custom hidden">
+      <div class="form-grid">
+        <label>Nombre<input id="customName" type="text" placeholder="Ej. Shure ULXD (propio)"></label>
+        <label>Paso de sintonía (MHz)<input id="customStep" type="number" step="0.005" min="0.001" placeholder="0.025"></label>
+      </div>
+      <div class="form-grid" style="margin-top:12px">
+        <label>Mínimo (MHz)<input id="customMin" type="number" step="0.001" placeholder="Ej. 470"></label>
+        <label>Máximo (MHz)<input id="customMax" type="number" step="0.001" placeholder="Ej. 608"></label>
+      </div>
+      <p class="hint" id="customDeviceStatus" style="margin-top:10px">Completá mínimo, máximo y paso para que este perfil empiece a generar candidatos.</p>
+    </div>
+  </section>
+<section class="card">
+    <h2><span class="ch-tag">CH.02</span>Frecuencias ocupadas / equipos en uso</h2>
     <div class="row">
       <input id="occupiedFreq" type="number" step="0.001" placeholder="Ej. 566.200">
       <input id="occupiedPower" type="number" step="1" min="0" placeholder="mW (opc.)" class="power-input">
       <label class="check inline"><input id="occupiedDigital" type="checkbox"> digital</label>
       <button id="addFreq">Agregar</button>
     </div>
-    <p class="hint">Potencia y "digital" son opcionales: si los cargás, el motor pondera separación e IM según la potencia real y descuenta parte de la penalización IM cuando todo lo que contribuye a un producto es digital de espectro angosto.</p>
+    <p class="hint">Las frecuencias agregadas manualmente quedan vinculadas automáticamente al dispositivo seleccionado en CH.03. Las detectadas por scan permanecen como ocupadas externas.</p><div class="workflow-channel-head"><div><strong>Canales en uso</strong><span class="hint">La ficha se genera desde las frecuencias ocupadas; no hay un formulario paralelo.</span></div><span id="wfSaveStatus" class="project-status">Guardado local</span></div><div id="wfBackupHint" class="backup-hint" hidden></div><div id="wfChannels" class="wf-channels"></div><p class="hint">Potencia y "digital" son opcionales: si los cargás, el motor pondera separación e IM según la potencia real y descuenta parte de la penalización IM cuando todo lo que contribuye a un producto es digital de espectro angosto.</p>
     <div id="occupiedList" class="chips"></div>
     <div id="selfConflicts" class="self-conflicts"></div>
     <div class="preset">
@@ -196,27 +138,7 @@
       <p id="scanStatus" class="hint"></p>
     </details>
   </section>
-
-  <section class="card">
-    <h2><span class="ch-tag">CH.03</span>Dispositivo que querés agregar</h2>
-    <label>Perfil
-      <select id="deviceSelect"></select>
-    </label>
-    <div id="deviceInfo" class="device-info"></div>
-    <div id="customDevice" class="custom hidden">
-      <div class="form-grid">
-        <label>Nombre<input id="customName" type="text" placeholder="Ej. Shure ULXD (propio)"></label>
-        <label>Paso de sintonía (MHz)<input id="customStep" type="number" step="0.005" min="0.001" placeholder="0.025"></label>
-      </div>
-      <div class="form-grid" style="margin-top:12px">
-        <label>Mínimo (MHz)<input id="customMin" type="number" step="0.001" placeholder="Ej. 470"></label>
-        <label>Máximo (MHz)<input id="customMax" type="number" step="0.001" placeholder="Ej. 608"></label>
-      </div>
-      <p class="hint" id="customDeviceStatus" style="margin-top:10px">Completá mínimo, máximo y paso para que este perfil empiece a generar candidatos.</p>
-    </div>
-  </section>
-
-  <section class="card">
+<section class="card">
     <h2><span class="ch-tag">CH.04</span>Perfil de coordinación</h2>
     <label for="coordinationProfile">Estrategia del motor
       <select id="coordinationProfile">
@@ -233,8 +155,7 @@
       <p><strong>More Frequencies:</strong> elimina IM5 y los IM3 de 3 TX o más; solo conserva IM3 de dos transmisores (2A−B). Usa como guarda mínima el ancho de banda del receptor publicado por el perfil del equipo.</p>
     </div>
   </section>
-
-  <section class="card">
+<section class="card">
     <h2><span class="ch-tag">CH.05</span>Parámetros del análisis</h2>
     <div class="form-grid">
       <div class="field">
@@ -318,8 +239,7 @@
     </div>
     <p class="hint">La clasificación sigue distinguiendo 🔴 CRÍTICO / 🟠 ADVERTENCIA / 🟡 REVISAR / 🟢 RECOMENDADO. El Perfil de coordinación determina qué fenómenos matemáticos llegan al score; no pretende afirmar que un producto ignorado sea físicamente imposible.</p>
   </section>
-
-  <section class="card wide">
+<section class="card wide">
     <div class="section-head">
       <div>
         <h2><span class="ch-tag">CH.06</span>Recomendaciones</h2>
@@ -329,8 +249,7 @@
     </div>
     <div id="results"></div>
   </section>
-
-  <section class="card wide">
+<section class="card wide">
     <div class="section-head">
       <div>
         <h2><span class="ch-tag">CH.07</span>Buscar un conjunto de frecuencias simultáneas</h2>
@@ -343,12 +262,50 @@
     </div>
     <div id="setResults"></div>
   </section>
-
-  <section class="card wide">
+<section class="card wide">
     <h2><span class="ch-tag">Nota</span>Metodología</h2>
     <p>El motor base sigue calculando productos de intermodulación matemáticos, pero el Perfil de coordinación decide cuáles son relevantes para la estrategia elegida. Robust conserva el screening completo; Standard pasa al score solamente IM3; More Frequencies pasa solamente IM3 de dos TX. También modifica la separación mínima entre portadoras para priorizar huecos funcionales cuando el espectro está saturado.</p>
     <p><strong>Importante:</strong> este coordinador es matemático/heurístico. No modela IP3, bloqueo del receptor, ganancia de antena, distancia real entre TX/RX, aislamiento entre antenas ni potencia efectiva radiada. Los perfiles marcados como "estimados" o "pendientes" dependen de la variante exacta del equipo o todavía no tienen datasheet público — confirmá contra tu unidad real. Ninguna recomendación acá reemplaza un scan RF en la locación ni determina legalidad/regulación.</p>
   </section>
+
+<div id="wfEditModal" class="project-modal" aria-hidden="true">
+  <div class="project-modal-card" role="dialog" aria-modal="true" aria-labelledby="wfEditTitle">
+    <div class="project-modal-head">
+      <div><span class="ch-tag">EDITAR CANAL</span><h2 id="wfEditTitle">Canal</h2></div>
+      <button id="wfEditClose" type="button" class="secondary">Cerrar</button>
+    </div>
+    <div class="edit-grid">
+      <label>Canal / identificador<input id="wfEditChannel" type="text"></label>
+      <label>Función<input id="wfEditRole" type="text" placeholder="Lav / IFB / cámara"></label>
+      <label>Dispositivo<select id="wfEditDevice"></select></label>
+      <label>Frecuencia (MHz)<input id="wfEditFreq" type="number" step="0.001"></label>
+      <label>Potencia (mW)<input id="wfEditPower" type="number" step="1" min="0" placeholder="Opcional"></label>
+      <label class="check edit-digital"><input id="wfEditDigital" type="checkbox"> digital</label>
+      <label class="edit-notes">Notas<input id="wfEditNotes" type="text"></label>
+    </div>
+    <div class="project-modal-actions">
+      <button id="wfEditSave" type="button">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div id="fieldMode" class="field-mode" aria-hidden="true">
+  <div class="field-screen">
+    <div class="field-screen-head">
+      <div>
+        <div class="field-kicker">CRF · FIELD MODE</div>
+        <h2 id="fieldProjectName">Mi rodaje</h2>
+        <p id="fieldRegionName" class="field-region-name">Locación</p>
+      </div>
+      <div class="workflow-actions">
+        <button id="fieldSheet" type="button" class="secondary">Hoja RF</button>
+        <button id="fieldClose" type="button">Salir</button>
+      </div>
+    </div>
+    <div id="fieldAssignments" class="field-assignments"></div>
+    <p id="fieldUnassigned" class="field-unassigned"></p>
+  </div>
+</div>
 </main>
 <footer class="footer">Diseñado y creado por Ramiro N. Alvarez · con herramientas de IA.</footer>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

@@ -1,155 +1,301 @@
-/* CRF - workflow de produccion. Capa de uso sobre el motor existente. */
+/* CRF - workflow de produccion. Capa de proyecto sobre el motor RF existente. */
 (function(){
-  const STORE="crf.rfProject.v1";
+  const STORE="crf.rfProject.v2";
+  const LEGACY_STORE="crf.rfProject.v1";
   const q=id=>document.getElementById(id);
-  const near=(a,b)=>Math.abs(Number(a)-Number(b))<0.0001;
-  const fmt=f=>Number(f).toFixed(3);
   const esc=s=>String(s??"").replace(/[&<>\"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-  const cp=x=>JSON.parse(JSON.stringify(x));
-  const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  let W={project:{name:"Mi rodaje",production:"",date:new Date().toISOString().slice(0,10),notes:""},regions:[],active:null};
-  const dev=id=>state.devices?.[id]||null;
-  const deviceId=()=>q("wfDeviceSelect")?.value||q("deviceSelect")?.value||"";
-  const region=()=>W.regions.find(r=>r.id===W.active)||W.regions[0];
+  const fmt=f=>Number(f).toFixed(3);
+  const near=(a,b)=>Math.abs(Number(a)-Number(b))<0.0001;
+  const clone=x=>JSON.parse(JSON.stringify(x));
+  const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const today=()=>new Date().toISOString().slice(0,10);
 
-  function freshRegion(name){
-    return {id:uid(),name:name||"Locacion 01",location:"",
-      rangeMin:+q("rangeMin").value||550,rangeMax:+q("rangeMax").value||600,
-      rangeMargin:+q("rangeMargin").value||2,occupied:[],assignments:[]};
+  let W={version:2,project:{name:"Mi rodaje",production:"",date:today(),notes:""},selectedDeviceId:"",locations:[],activeLocationId:null};
+  let backupTarget=null,editingId=null;
+  let coreAddOccupied=null,coreAddCandidate=null,coreAddSet=null,coreRemoveFreq=null;
+
+  const currentLocation=()=>W.locations.find(x=>x.id===W.activeLocationId)||W.locations[0];
+  const currentDevice=()=>state.devices?.[q("deviceSelect")?.value]||null;
+  const deviceName=id=>state.devices?.[id]?.name||id||"Dispositivo";
+  const nextChannelLabel=()=>{
+    const used=(currentLocation()?.channels||[]).map(x=>String(x.channel||""));
+    let n=1;while(used.some(x=>x.toUpperCase()===("CH "+String(n).padStart(2,"0"))))n++;
+    return "CH "+String(n).padStart(2,"0");
+  };
+
+  function freshLocation(name){
+    return {id:uid(),name:name||("Locación "+(W.locations.length+1)),location:"",
+      rangeMin:Number(q("rangeMin")?.value)||550,rangeMax:Number(q("rangeMax")?.value)||600,
+      rangeMargin:Number.isFinite(Number(q("rangeMargin")?.value))?Number(q("rangeMargin").value):2,occupied:[],channels:[]};
   }
-  function normRegion(r){
-    r={id:r.id||uid(),name:r.name||"Locacion",location:r.location||"",
-      rangeMin:+r.rangeMin||550,rangeMax:+r.rangeMax||600,
-      rangeMargin:Number.isFinite(+r.rangeMargin)?+r.rangeMargin:2,
-      occupied:Array.isArray(r.occupied)?r.occupied:[],assignments:Array.isArray(r.assignments)?r.assignments:[]};
-    r.occupied=r.occupied.map(o=>({freq:+o.freq,powerMw:+o.powerMw>0?+o.powerMw:null,digital:!!o.digital,source:o.source||"manual"})).filter(o=>Number.isFinite(o.freq));
-    r.assignments=r.assignments.filter(a=>Number.isFinite(+a.frequency)&&r.occupied.some(o=>near(o.freq,a.frequency)));
-    return r;
+
+  function normalizeChannel(a){
+    const frequency=Number(a.frequency);if(!Number.isFinite(frequency))return null;
+    const dId=a.deviceId||"";
+    const backups=Array.isArray(a.backups)?a.backups.slice(0,2):[a.backup1??null,a.backup2??null];
+    return {id:a.id||uid(),channel:a.channel||"CH 01",role:a.role||"",deviceId:dId,
+      deviceName:a.deviceName||deviceName(dId),frequency,powerMw:Number.isFinite(Number(a.powerMw))&&Number(a.powerMw)>0?Number(a.powerMw):null,
+      digital:!!a.digital,backups:backups.map(x=>Number.isFinite(Number(x))?Number(x):null),notes:a.notes||""};
   }
-  function normProject(p){
-    W.project={name:p?.project?.name||"Mi rodaje",production:p?.project?.production||"",
-      date:p?.project?.date||new Date().toISOString().slice(0,10),notes:p?.project?.notes||""};
-    W.regions=(p?.regions||[]).map(normRegion);
-    if(!W.regions.length)W.regions=[freshRegion()];
-    W.active=p?.activeRegionId&&W.regions.some(r=>r.id===p.activeRegionId)?p.activeRegionId:W.regions[0].id;
+
+  function normalizeLocation(r){
+    const occupied=Array.isArray(r?.occupied)?r.occupied.map(o=>({freq:Number(o.freq),
+      powerMw:Number.isFinite(Number(o.powerMw))&&Number(o.powerMw)>0?Number(o.powerMw):null,digital:!!o.digital,source:o.source||"manual"}))
+      .filter(o=>Number.isFinite(o.freq)):[];
+    const rawChannels=Array.isArray(r?.channels)?r.channels:(Array.isArray(r?.assignments)?r.assignments:[]);
+    const channels=rawChannels.map(normalizeChannel).filter(Boolean)
+      .filter(a=>occupied.some(o=>near(o.freq,a.frequency)))
+      .map(a=>Object.assign(a,{deviceName:deviceName(a.deviceId)!==a.deviceId?deviceName(a.deviceId):a.deviceName}));
+    return {id:r?.id||uid(),name:r?.name||"Locación",location:r?.location||"",
+      rangeMin:Number.isFinite(Number(r?.rangeMin))?Number(r.rangeMin):550,
+      rangeMax:Number.isFinite(Number(r?.rangeMax))?Number(r.rangeMax):600,
+      rangeMargin:Number.isFinite(Number(r?.rangeMargin))?Number(r.rangeMargin):2,occupied,channels};
   }
+
+  function normalizeProject(p){
+    const project=p?.project||{};
+    W.project={name:project.name||"Mi rodaje",production:project.production||"",date:project.date||today(),notes:project.notes||""};
+    W.selectedDeviceId=p?.selectedDeviceId||p?.selectedDevice||"";
+    W.locations=(Array.isArray(p?.locations)?p.locations:(Array.isArray(p?.regions)?p.regions:[])).map(normalizeLocation);
+    if(!W.locations.length)W.locations=[freshLocation("Locación 01")];
+    W.activeLocationId=p?.activeLocationId||p?.activeRegionId;
+    if(!W.locations.some(x=>x.id===W.activeLocationId))W.activeLocationId=W.locations[0].id;
+  }
+
   function capture(){
-    const r=region(); if(!r)return;
-    W.project.name=q("wfProjectName").value.trim()||"Mi rodaje";
-    W.project.production=q("wfProduction").value.trim();
-    W.project.date=q("wfProjectDate").value;
-    W.project.notes=q("wfProjectNotes").value.trim();
-    r.name=q("wfRegionName").value.trim()||"Locacion";
-    r.location=q("wfRegionLocation").value.trim();
-    r.rangeMin=+q("rangeMin").value||r.rangeMin;
-    r.rangeMax=+q("rangeMax").value||r.rangeMax;
-    r.rangeMargin=Number.isFinite(+q("rangeMargin").value)?+q("rangeMargin").value:2;
-    r.occupied=cp(state.occupied||[]);
-    r.assignments=r.assignments.filter(a=>r.occupied.some(o=>near(o.freq,a.frequency)));
+    const r=currentLocation();if(!r)return;
+    W.project.name=q("wfProjectName")?.value.trim()||"Mi rodaje";
+    W.project.production=q("wfProduction")?.value.trim()||"";
+    W.project.date=q("wfProjectDate")?.value||today();
+    W.project.notes=q("wfProjectNotes")?.value.trim()||"";
+    r.name=q("wfRegionName")?.value.trim()||"Locación";r.location=q("wfRegionLocation")?.value.trim()||"";
+    r.rangeMin=Number(q("rangeMin")?.value)||r.rangeMin;r.rangeMax=Number(q("rangeMax")?.value)||r.rangeMax;
+    r.rangeMargin=Number.isFinite(Number(q("rangeMargin")?.value))?Number(q("rangeMargin").value):r.rangeMargin;
+    r.occupied=clone(state.occupied||[]);
+    r.channels=r.channels.filter(a=>r.occupied.some(o=>near(o.freq,a.frequency)));
+    for(const a of r.channels)a.deviceName=deviceName(a.deviceId);
+    W.selectedDeviceId=q("deviceSelect")?.value||W.selectedDeviceId;
   }
-  function payload(){capture();return{version:1,project:cp(W.project),activeRegionId:W.active,regions:cp(W.regions)}}
-  function persist(){try{localStorage.setItem(STORE,JSON.stringify(payload()));q("wfSaveStatus").textContent="Guardado local"}catch(e){q("wfSaveStatus").textContent="Sin guardado local"}}
-  let timer; function schedule(){clearTimeout(timer);timer=setTimeout(persist,250)}
-  function syncUI(){
-    const r=region(); if(!r)return;
-    q("wfProjectName").value=W.project.name;
-    q("wfProduction").value=W.project.production;
-    q("wfProjectDate").value=W.project.date;
-    q("wfProjectNotes").value=W.project.notes;
-    q("wfRegionName").value=r.name;
-    q("wfRegionLocation").value=r.location;
-    q("wfRegionSelect").innerHTML=W.regions.map(x=>"<option value=\""+esc(x.id)+"\">"+esc(x.name)+"</option>").join("");
-    q("wfDeviceSelect").innerHTML=Object.entries(state.devices||{}).map(([id,d])=>"<option value=\""+esc(id)+"\">"+esc(d.name)+"</option>").join("");
-    q("wfDeviceSelect").value=q("deviceSelect").value;
-    q("wfRegionSelect").value=W.active;
-    q("rangeMin").value=r.rangeMin;q("rangeMax").value=r.rangeMax;q("rangeMargin").value=r.rangeMargin;
-    const d=dev(deviceId());
-    q("wfTargetDevice").textContent=d?.name||"Elegi un dispositivo en CH.03";
-    if(d?.powerOptionsMw?.length&&!q("wfPower").value)q("wfPower").value=d.powerOptionsMw[0];
-    if(d?.modulation)q("wfDigital").checked=d.modulation==="digital";
-    renderAssignments();renderField();q("wfSaveStatus").textContent="Guardado local";
+
+  function payload(){capture();return {version:2,savedAt:new Date().toISOString(),project:clone(W.project),
+    selectedDeviceId:W.selectedDeviceId,activeLocationId:W.activeLocationId,locations:clone(W.locations)}}
+
+  function setStatus(text){if(q("wfSaveStatus"))q("wfSaveStatus").textContent=text;if(q("wfSaveStatusTop"))q("wfSaveStatusTop").textContent=text}
+  function persist(){try{localStorage.setItem(STORE,JSON.stringify(payload()));setStatus("Guardado local")}catch(e){setStatus("No se pudo guardar")}}
+  let timer=null;function schedule(){clearTimeout(timer);setStatus("Cambios pendientes…");timer=setTimeout(persist,300)}
+  function toast(msg){if(typeof showToast==="function"){showToast(msg);return}const el=q("toast");if(!el)return;el.innerHTML=msg;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),2400)}
+
+  function renderRegionSelect(){const sel=q("wfRegionSelect");if(!sel)return;sel.innerHTML=W.locations.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join("");sel.value=W.activeLocationId}
+  function renderProjectMeta(){const r=currentLocation();if(!r)return;q("wfProjectName").value=W.project.name;q("wfProduction").value=W.project.production;q("wfProjectDate").value=W.project.date;q("wfProjectNotes").value=W.project.notes;q("wfRegionName").value=r.name;q("wfRegionLocation").value=r.location;renderRegionSelect()}
+
+  function renderChannels(){
+    const box=q("wfChannels");if(!box)return;
+    const r=currentLocation(),channels=(r?.channels||[]).slice();
+    const unassigned=(state.occupied||[]).filter(o=>!channels.some(a=>near(a.frequency,o.freq)));
+    if(!channels.length&&!unassigned.length){box.innerHTML='<div class="wf-empty">Todavía no hay frecuencias/equipos en uso en esta locación.</div>'}
+    else{
+      box.innerHTML=channels.map(a=>{
+        const b=a.backups||[null,null],active=backupTarget&&backupTarget.id===a.id;
+        return '<article class="wf-channel'+(active?' is-backup-target':'')+'"><div class="wf-channel-main"><div class="wf-channel-name">'+esc(a.channel)+'<span>'+esc(a.role||"")+'</span></div>'+
+          '<div class="wf-channel-device">'+esc(deviceName(a.deviceId))+(a.digital?" · digital":"")+(a.powerMw?(" · "+esc(a.powerMw)+" mW"):"")+'</div></div>'+
+          '<div class="wf-channel-freq">'+fmt(a.frequency)+'<small>MHz</small></div>'+
+          '<div class="wf-channel-backups"><button type="button" class="text-btn '+(active&&backupTarget.slot===0?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\',0)">BKP 1 '+(b[0]!==null&&b[0]!==undefined?fmt(b[0]):"—")+'</button>'+
+          '<button type="button" class="text-btn '+(active&&backupTarget.slot===1?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\',1)">BKP 2 '+(b[1]!==null&&b[1]!==undefined?fmt(b[1]):"—")+'</button></div>'+
+          '<div class="wf-channel-actions"><button type="button" class="secondary" onclick="CRF_WORKFLOW.openEdit(\''+esc(a.id)+'\')">Editar</button><button type="button" class="secondary" onclick="CRF_WORKFLOW.removeChannel(\''+esc(a.id)+'\')">Quitar</button></div>'+
+          (a.notes?'<div class="wf-channel-notes">'+esc(a.notes)+'</div>':'')+'</article>';
+      }).join("");
+      if(unassigned.length)box.innerHTML+='<div class="wf-unassigned"><strong>Ocupadas sin ficha</strong><span>'+unassigned.map(o=>fmt(o.freq)+" MHz").join(" · ")+'</span><small>Las frecuencias provenientes de scan quedan aquí sin convertirse en canales.</small></div>';
+    }
+    renderBackupHint();
   }
-  function loadRegion(r){state.occupied=cp(r.occupied||[]);q("rangeMin").value=r.rangeMin;q("rangeMax").value=r.rangeMax;q("rangeMargin").value=r.rangeMargin;renderOccupied();calculate()}
-  function addRegion(){capture();const r=freshRegion("Locacion "+(W.regions.length+1));W.regions.push(r);W.active=r.id;loadRegion(r);syncUI();schedule();toast("Nueva locacion creada")}
-  function delRegion(){if(W.regions.length===1)return toast("El proyecto necesita al menos una locacion");W.regions=W.regions.filter(r=>r.id!==W.active);W.active=W.regions[0].id;loadRegion(region());syncUI();schedule();toast("Locacion eliminada")}
-  function activate(id){capture();W.active=id;loadRegion(region());syncUI();schedule()}
-  function clearForm(){q("wfAssignFreq").value="";q("wfChannel").value="";q("wfRole").value="";q("wfPower").value="";q("wfBackup1").value="";q("wfBackup2").value="";q("wfAssignNotes").value="";syncUI()}
-  function addAssignment(freqOverride){
-    const r=region(),d=dev(deviceId()),freq=Number(freqOverride??q("wfAssignFreq").value),ch=q("wfChannel").value.trim();
-    if(!Number.isFinite(freq)||!ch)return toast("Completa frecuencia y canal / identificador");
-    const p=Number(q("wfPower").value);
-    const a={id:uid(),deviceId:deviceId(),deviceName:d?.name||"Dispositivo",channel:ch,role:q("wfRole").value.trim(),frequency:freq,
-      powerMw:Number.isFinite(p)&&p>0?p:null,digital:q("wfDigital").checked,backups:[q("wfBackup1").value.trim(),q("wfBackup2").value.trim()],notes:q("wfAssignNotes").value.trim()};
-    if(!state.occupied.some(o=>near(o.freq,freq)))state.occupied.push({freq,powerMw:a.powerMw,digital:a.digital,source:"assigned"});
-    else{const o=state.occupied.find(o=>near(o.freq,freq));o.powerMw=a.powerMw;o.digital=a.digital}
-    r.assignments.push(a);state.occupied.sort((x,y)=>x.freq-y.freq);
-    renderOccupied();calculate();capture();renderAssignments();renderField();clearForm();schedule();toast("Canal agregado a la coordinacion")
+
+  function renderBackupHint(){
+    const el=q("wfBackupHint");if(!el)return;
+    if(!backupTarget){el.hidden=true;el.innerHTML="";return}
+    const a=currentLocation()?.channels?.find(x=>x.id===backupTarget.id);if(!a){backupTarget=null;el.hidden=true;return}
+    el.hidden=false;el.innerHTML='<span>Backup '+(backupTarget.slot+1)+' para <strong>'+esc(a.channel)+'</strong> · '+fmt(a.frequency)+' MHz</span><button type="button" class="secondary" onclick="CRF_WORKFLOW.cancelBackup()">Cancelar</button>';
   }
-  function removeAssignment(id){
-    const r=region(),a=r.assignments.find(x=>x.id===id);if(!a)return;
-    r.assignments=r.assignments.filter(x=>x.id!==id);
-    state.occupied=state.occupied.filter(o=>!near(o.freq,a.frequency));
-    renderOccupied();calculate();capture();renderAssignments();renderField();schedule();toast((a.channel||"Canal")+" eliminado")
-  }
-  function renderAssignments(){
-    const r=region(),b=q("wfAssignments");if(!r||!b)return;
-    if(!r.assignments.length){b.innerHTML="<div class=\"wf-empty\">No hay canales asignados en esta locacion.</div>";return}
-    b.innerHTML=r.assignments.map(a=>{
-      const bx=(a.backups||[]).filter(Boolean), extra=bx.length||a.notes;
-      return "<div class=\"wf-assignment\"><div><div class=\"wf-channel\">"+esc(a.channel||"SIN ID")+" <span>"+esc(a.role||"")+"</span></div>"+
-        "<div class=\"wf-device\">"+esc(a.deviceName)+(a.digital?" · digital":"")+(a.powerMw?" · "+esc(a.powerMw)+" mW":"")+
-        "</div></div><div class=\"wf-frequency\">"+fmt(a.frequency)+"<small>MHz</small></div>"+
-        "<button type=\"button\" class=\"secondary\" onclick=\"CRF_WORKFLOW.removeAssignment('"+esc(a.id)+"')\">Quitar</button>"+
-        (extra?"<div class=\"wf-extra\">"+(bx.length?"Backups: "+bx.map(x=>esc(x)+" MHz").join(" · "):"")+(bx.length&&a.notes?" · ":"")+(a.notes?esc(a.notes):"")+"</div>":"")+
-        "</div>";
-    }).join("");
-  }
+
   function renderField(){
-    const r=region(),b=q("fieldAssignments");if(!r||!b)return;
-    q("fieldProjectName").textContent=W.project.name;
-    q("fieldRegionName").textContent=r.name+(r.location?" · "+r.location:"");
-    if(!r.assignments.length){b.innerHTML="<div class=\"field-empty\">No hay canales asignados en esta locacion.</div>";return}
-    b.innerHTML=r.assignments.map(a=>{
-      const bx=(a.backups||[]).filter(Boolean);
-      return "<article class=\"field-row\"><div><div class=\"field-label\">"+esc(a.channel||"SIN ID")+"</div><div class=\"field-sub\">"+
-        esc(a.deviceName)+(a.role?" · "+esc(a.role):"")+"</div></div><div class=\"field-freq\">"+fmt(a.frequency)+" <span>MHz</span></div>"+
-        "<div class=\"field-backups\">"+(bx.length?"BACKUP · "+bx.map(esc).join(" · "):"")+"</div></article>";
-    }).join("");
+    const r=currentLocation();if(!r)return;
+    q("fieldProjectName").textContent=W.project.name;q("fieldRegionName").textContent=r.name+(r.location?" · "+r.location:"");
+    const b=q("fieldAssignments");
+    b.innerHTML=(r.channels||[]).length?r.channels.map(a=>{
+      const bx=(a.backups||[]).filter(Number.isFinite);
+      return '<article class="field-row"><div><div class="field-label">'+esc(a.channel)+'</div><div class="field-sub">'+esc(deviceName(a.deviceId))+(a.role?" · "+esc(a.role):"")+'</div></div>'+
+        '<div class="field-freq">'+fmt(a.frequency)+' <span>MHz</span></div><div class="field-backups">'+(bx.length?bx.map((v,i)=>"BKP "+(i+1)+" · "+fmt(v)+" MHz").join(" · "):"Sin backup asignado")+'</div></article>';
+    }).join(""):'<div class="field-empty">No hay canales identificados en esta locación.</div>';
+    const raw=(state.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));
+    q("fieldUnassigned").textContent=raw.length?("Frecuencias ocupadas sin ficha: "+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")):"";
   }
-  function useFreq(f){
-    if(typeof addCandidateAsOccupied==="function")addCandidateAsOccupied(f);
-    q("wfAssignFreq").value=fmt(f);
-    if(q("wfChannel").value.trim())addAssignment(f);else{capture();schedule();toast(fmt(f)+" MHz agregada a ocupadas")}
+
+  function syncUI(){
+    const r=currentLocation();if(!r)return;
+    renderProjectMeta();
+    if(W.selectedDeviceId&&state.devices[W.selectedDeviceId])q("deviceSelect").value=W.selectedDeviceId;
+    if(typeof renderDeviceInfo==="function")renderDeviceInfo();
+    q("rangeMin").value=r.rangeMin;q("rangeMax").value=r.rangeMax;q("rangeMargin").value=r.rangeMargin;
+    renderRegionSelect();renderChannels();renderField();
   }
-  function sheet(){
-    capture();const r=region(),w=window.open("","_blank");if(!w)return toast("El navegador bloqueo la hoja RF");
-    const rows=r.assignments.map(a=>"<tr><td>"+esc(a.channel)+"</td><td>"+esc(a.role)+"</td><td>"+esc(a.deviceName)+"</td><td class=\"m\">"+fmt(a.frequency)+"</td><td>"+(a.powerMw?a.powerMw+" mW":"-")+"</td><td>"+((a.backups||[]).filter(Boolean).map(fmt).join(" · ")||"-")+"</td></tr>").join("");
-    w.document.write("<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>CRF · Hoja RF</title><style>body{font:14px Arial;color:#111;padding:25px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:7px;text-align:left}.m{font:15px monospace}.note{margin-top:18px;padding:10px;background:#f2f2f2}</style></head><body><h1>CRF · Hoja de coordinacion RF</h1><p><b>"+esc(W.project.name)+"</b> · "+esc(r.name)+(r.location?" · "+esc(r.location):"")+" · "+esc(W.project.date)+"</p><table><tr><th>Canal</th><th>Funcion</th><th>Dispositivo</th><th>MHz</th><th>Potencia</th><th>Backups</th></tr>"+(rows||"<tr><td colspan=\"6\">Sin canales asignados.</td></tr>")+"</table><p class=\"note\">CRF es un coordinador matematico/heuristico. Esta hoja representa la coordinacion cargada y no sustituye la verificacion del espectro real.</p><script>onload=function(){setTimeout(function(){print()},150)}<\\/script></body></html>");
-    w.document.close();
+
+  function restoreLocation(){
+    const r=currentLocation();if(!r)return;
+    backupTarget=null;state.occupied=clone(r.occupied||[]);
+    q("rangeMin").value=r.rangeMin;q("rangeMax").value=r.rangeMax;q("rangeMargin").value=r.rangeMargin;
+    if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate();syncUI();
   }
+
+  function activateLocation(id){capture();const next=W.locations.find(x=>x.id===id);if(!next)return;W.activeLocationId=next.id;restoreLocation();schedule()}
+  function addLocation(){capture();const r=freshLocation();W.locations.push(r);W.activeLocationId=r.id;state.occupied=[];if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate();syncUI();schedule();toast("Nueva locación creada")}
+  function deleteLocation(){
+    if(W.locations.length===1){toast("El proyecto necesita al menos una locación");return}
+    if(window.confirm&&!window.confirm("¿Eliminar la locación actual?"))return;
+    W.locations=W.locations.filter(x=>x.id!==W.activeLocationId);W.activeLocationId=W.locations[0].id;restoreLocation();schedule();toast("Locación eliminada");
+  }
+
+  function addChannelFromFrequency(freq,meta){
+    const r=currentLocation();if(!r)return null;if(r.channels.some(a=>near(a.frequency,freq)))return r.channels.find(a=>near(a.frequency,freq));
+    const d=currentDevice(),dId=meta?.deviceId||q("deviceSelect").value||"";
+    const a={id:uid(),channel:meta?.channel||nextChannelLabel(),role:meta?.role||"",deviceId:dId,deviceName:deviceName(dId),frequency:Number(freq),
+      powerMw:Number.isFinite(Number(meta?.powerMw))&&Number(meta.powerMw)>0?Number(meta.powerMw):null,
+      digital:typeof meta?.digital==="boolean"?meta.digital:!!(d&&d.modulation==="digital"),backups:[null,null],notes:meta?.notes||""};
+    r.channels.push(a);r.channels.sort((x,y)=>x.frequency-y.frequency);return a;
+  }
+
+  function wrappedAddOccupied(){
+    const freq=Number(q("occupiedFreq").value),pw=Number(q("occupiedPower").value),dig=!!q("occupiedDigital").checked,before=state.occupied.length;
+    coreAddOccupied();
+    if(state.occupied.length>before&&Number.isFinite(freq))addChannelFromFrequency(freq,{powerMw:Number.isFinite(pw)&&pw>0?pw:null,digital:dig});
+    capture();renderChannels();renderField();schedule();
+  }
+
+  function wrappedRemoveFreq(i){
+    const removed=state.occupied[i];coreRemoveFreq(i);
+    if(removed){const r=currentLocation();r.channels=r.channels.filter(a=>!near(a.frequency,removed.freq));if(backupTarget&&!r.channels.some(a=>a.id===backupTarget.id))backupTarget=null}
+    capture();renderChannels();renderField();schedule();
+  }
+
+  function wrappedCandidate(freq){
+    const before=state.occupied.length;coreAddCandidate(freq);
+    if(state.occupied.length>before){
+      const d=currentDevice(),a=addChannelFromFrequency(freq,{deviceId:q("deviceSelect").value,digital:!!(d&&d.modulation==="digital")});
+      const o=state.occupied.find(x=>near(x.freq,freq));if(o&&a){o.digital=a.digital;o.powerMw=a.powerMw}
+      if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate();
+    }
+    capture();renderChannels();renderField();schedule();toast("✓ "+fmt(freq)+" MHz asignada a "+esc(currentDevice()?.name||"dispositivo"));
+  }
+
+  function wrappedSet(freqs,btn){
+    const before=state.occupied.length;coreAddSet(freqs,btn);
+    if(state.occupied.length>before){
+      const d=currentDevice();freqs.forEach(f=>addChannelFromFrequency(f,{deviceId:q("deviceSelect").value,digital:!!(d&&d.modulation==="digital")}));
+      if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate();
+    }
+    capture();renderChannels();renderField();schedule();
+  }
+
+  function startBackup(id,slot){
+    const a=currentLocation()?.channels?.find(x=>x.id===id);if(!a)return;
+    backupTarget={id,slot};renderChannels();if(typeof calculate==="function")calculate();
+    toast("Elegí una frecuencia en Recomendaciones para usarla como Backup "+(slot+1));
+    setTimeout(()=>q("results")?.scrollIntoView({behavior:"smooth",block:"start"}),30);
+  }
+  function cancelBackup(){backupTarget=null;renderChannels();if(typeof calculate==="function")calculate();toast("Selección de backup cancelada")}
+  function hasBackupTarget(){return !!backupTarget}
+  function backupLabel(){return backupTarget?"Usar como Backup "+(backupTarget.slot+1):""}
+
+  function useAsBackup(freq){
+    if(!backupTarget){toast("Primero elegí BKP 1 o BKP 2 en un canal");return}
+    const r=currentLocation(),a=r?.channels?.find(x=>x.id===backupTarget.id);if(!a){backupTarget=null;return}
+    if((state.occupied||[]).some(o=>near(o.freq,freq)&&!near(o.freq,a.frequency))){toast(fmt(freq)+" MHz ya está ocupada");return}
+    if(near(freq,a.frequency)){toast("El backup no puede ser igual a la frecuencia principal");return}
+    a.backups=a.backups||[null,null];a.backups[backupTarget.slot]=Number(freq);
+    const slot=backupTarget.slot+1;backupTarget=null;capture();renderChannels();renderField();schedule();if(typeof calculate==="function")calculate();
+    toast("✓ "+fmt(freq)+" MHz guardada como Backup "+slot);
+  }
+
+  function openEdit(id){
+    const a=currentLocation()?.channels?.find(x=>x.id===id);if(!a)return;
+    editingId=id;q("wfEditTitle").textContent=a.channel||"Canal";q("wfEditChannel").value=a.channel||"";q("wfEditRole").value=a.role||"";
+    q("wfEditDevice").innerHTML=Object.entries(state.devices||{}).map(([k,d])=>'<option value="'+esc(k)+'">'+esc(d.name)+'</option>').join("");
+    q("wfEditDevice").value=a.deviceId||q("deviceSelect").value;q("wfEditFreq").value=fmt(a.frequency);q("wfEditPower").value=a.powerMw??"";
+    q("wfEditDigital").checked=!!a.digital;q("wfEditNotes").value=a.notes||"";q("wfEditModal").classList.add("show");q("wfEditModal").setAttribute("aria-hidden","false");
+  }
+  function closeEdit(){editingId=null;q("wfEditModal").classList.remove("show");q("wfEditModal").setAttribute("aria-hidden","true")}
+  function saveEdit(){
+    const r=currentLocation(),a=r?.channels?.find(x=>x.id===editingId);if(!a)return;
+    const nf=Number(q("wfEditFreq").value);if(!Number.isFinite(nf)){toast("Frecuencia inválida");return}
+    if((state.occupied||[]).some(o=>near(o.freq,nf)&&!near(o.freq,a.frequency))){toast(fmt(nf)+" MHz ya está ocupada");return}
+    const old=a.frequency;a.channel=q("wfEditChannel").value.trim()||"CH 01";a.role=q("wfEditRole").value.trim();a.deviceId=q("wfEditDevice").value;a.deviceName=deviceName(a.deviceId);a.frequency=nf;
+    const p=Number(q("wfEditPower").value);a.powerMw=Number.isFinite(p)&&p>0?p:null;a.digital=!!q("wfEditDigital").checked;a.notes=q("wfEditNotes").value.trim();
+    const o=(state.occupied||[]).find(x=>near(x.freq,old));if(o){o.freq=nf;o.powerMw=a.powerMw;o.digital=a.digital}
+    state.occupied.sort((x,y)=>x.freq-y.freq);closeEdit();if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate();renderChannels();renderField();schedule();toast("✓ Canal actualizado");
+  }
+  function removeChannel(id){
+    const r=currentLocation(),a=r?.channels?.find(x=>x.id===id);if(!a)return;
+    if(window.confirm&&!window.confirm("¿Quitar "+(a.channel||"este canal")+" de las frecuencias en uso?"))return;
+    r.channels=r.channels.filter(x=>x.id!==id);state.occupied=state.occupied.filter(o=>!near(o.freq,a.frequency));backupTarget=null;
+    if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate();renderChannels();renderField();schedule();toast((a.channel||"Canal")+" quitado");
+  }
+
   function exportProject(){
     const b=new Blob([JSON.stringify(payload(),null,2)],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");
     a.href=u;a.download=(W.project.name||"crf-rodaje").replace(/[^a-z0-9_-]+/gi,"_")+".crf.json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),500);toast("Proyecto exportado");
   }
-  function importProject(file){const fr=new FileReader();fr.onload=()=>{try{normProject(JSON.parse(fr.result));loadRegion(region());syncUI();persist();toast("Proyecto cargado")}catch(e){toast("Archivo CRF invalido")}};fr.readAsText(file)}
-  function field(){renderField();q("fieldMode").classList.add("show");document.body.classList.add("field-open")}
-  function closeField(){q("fieldMode").classList.remove("show");document.body.classList.remove("field-open")}
-  function toast(s){const e=q("wfToast");e.textContent=s;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)}
-  function bind(){
-    let raw=null;try{raw=localStorage.getItem(STORE)}catch(e){}
-    let saved=null;try{saved=raw?JSON.parse(raw):null}catch(e){saved=null}
-    normProject(saved||{});loadRegion(region());syncUI();
-    ["wfProjectName","wfProduction","wfProjectDate","wfProjectNotes"].forEach(id=>q(id).addEventListener("input",schedule));
-    ["wfRegionName","wfRegionLocation"].forEach(id=>q(id).addEventListener("input",()=>{const r=region();r.name=q("wfRegionName").value.trim()||"Locacion";r.location=q("wfRegionLocation").value.trim();q("wfRegionSelect").querySelector('option[value="'+r.id+'"]').textContent=r.name;renderField();schedule()}));
-    q("wfRegionSelect").addEventListener("change",e=>activate(e.target.value));q("wfNewRegion").onclick=addRegion;q("wfDeleteRegion").onclick=delRegion;
-    q("wfSave").onclick=()=>{saveLocal();toast("Proyecto RF guardado")};q("wfExport").onclick=exportProject;q("wfImport").onclick=()=>q("wfFile").click();q("wfFile").onchange=e=>e.target.files[0]&&importProject(e.target.files[0]);
-    q("wfSheet").onclick=sheet;q("wfFieldMode").onclick=field;q("fieldClose").onclick=closeField;q("fieldSheet").onclick=sheet;q("wfAssignButton").onclick=()=>addAssignment();q("wfAssignClear").onclick=clearForm;
-    q("deviceSelect").addEventListener("change",()=>{syncUI();schedule()});
-    q("wfDeviceSelect").addEventListener("change",()=>{q("deviceSelect").value=q("wfDeviceSelect").value;q("deviceSelect").dispatchEvent(new Event("change"));});
-    ["rangeMin","rangeMax","rangeMargin"].forEach(id=>q(id).addEventListener("input",()=>{const r=region();r.rangeMin=+q("rangeMin").value||r.rangeMin;r.rangeMax=+q("rangeMax").value||r.rangeMax;r.rangeMargin=+q("rangeMargin").value||2;renderField();schedule()}));
-    document.addEventListener("click",()=>setTimeout(()=>{capture();schedule();renderAssignments();renderField()},0));
-    window.addEventListener("beforeunload",()=>{try{persist()}catch(e){}});
+
+  function sheet(){
+    const p=payload(),r=currentLocation(),win=window.open("","_blank");
+    if(!win){toast("El navegador bloqueó la Hoja RF");return}
+    const rows=(r.channels||[]).map(a=>'<tr><td>'+esc(a.channel)+'</td><td>'+esc(a.role||"")+'</td><td>'+esc(deviceName(a.deviceId))+'</td><td class="m">'+fmt(a.frequency)+'</td><td class="m">'+(a.backups?.[0]!==null&&a.backups?.[0]!==undefined?fmt(a.backups[0]):"—")+'</td><td class="m">'+(a.backups?.[1]!==null&&a.backups?.[1]!==undefined?fmt(a.backups[1]):"—")+'</td><td>'+(a.powerMw?a.powerMw+" mW":"—")+'</td></tr>').join("");
+    const raw=(r.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));
+    const rawHtml=raw.length?'<h2>Frecuencias ocupadas sin ficha</h2><p>'+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")+'</p>':"";
+    win.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>CRF · Hoja RF</title><style>body{font:14px Arial,sans-serif;color:#111;padding:28px}h1{margin:0 0 5px}p{margin:4px 0 16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:7px;text-align:left}th{background:#eee}.m{font:14px monospace}.note{margin-top:18px;padding:10px;background:#f1f1f1}</style></head><body><h1>CRF · Hoja RF</h1><p><strong>'+esc(p.project.name)+'</strong> · '+esc(r.name)+(r.location?" · "+esc(r.location):"")+' · '+esc(p.project.date)+'</p><table><thead><tr><th>Canal</th><th>Función</th><th>Dispositivo</th><th>Principal</th><th>Backup 1</th><th>Backup 2</th><th>Potencia</th></tr></thead><tbody>'+
+      (rows||'<tr><td colspan="7">Sin canales identificados.</td></tr>')+
+      '</tbody></table>'+rawHtml+'<p class="note">CRF es un coordinador matemático/heurístico. Esta hoja representa la coordinación cargada y no una medición de espectro en tiempo real.</p><script>onload=function(){setTimeout(function(){print()},150)}<\\/script></body></html>');
+    win.document.close();
   }
-  window.CRF_WORKFLOW={removeAssignment,useFrequency:useFreq,openField:field,closeField,save:()=>{saveLocal();toast("Proyecto RF guardado")},downloadProject:exportProject,rfSheet:sheet};
-  (async()=>{for(let i=0;i<100;i++){if(Object.keys(state.devices||{}).length){bind();return}await new Promise(r=>setTimeout(r,20))}if(q("wfProjectName"))bind()})();
+
+  function importProject(file){
+    const fr=new FileReader();fr.onload=()=>{
+      try{normalizeProject(JSON.parse(fr.result));if(W.selectedDeviceId&&state.devices[W.selectedDeviceId])q("deviceSelect").value=W.selectedDeviceId;restoreLocation();persist();toast("Proyecto cargado")}
+      catch(e){toast("Archivo CRF inválido")}
+    };fr.readAsText(file);
+  }
+
+  function field(){capture();renderField();q("fieldMode").classList.add("show");q("fieldMode").setAttribute("aria-hidden","false");document.body.classList.add("field-open")}
+  function closeField(){q("fieldMode").classList.remove("show");q("fieldMode").setAttribute("aria-hidden","true");document.body.classList.remove("field-open")}
+
+  function loadSaved(){
+    let raw=null;try{raw=localStorage.getItem(STORE)||localStorage.getItem(LEGACY_STORE)}catch(e){}
+    if(!raw){normalizeProject({});return}
+    try{normalizeProject(JSON.parse(raw))}catch(e){normalizeProject({})}
+  }
+
+  function wrapCore(){
+    coreAddOccupied=window.addOccupied;coreAddCandidate=window.addCandidateAsOccupied;coreAddSet=window.addSetAsOccupied;coreRemoveFreq=window.removeFreq;
+    window.addOccupied=wrappedAddOccupied;window.addCandidateAsOccupied=wrappedCandidate;window.addSetAsOccupied=wrappedSet;window.removeFreq=wrappedRemoveFreq;
+    if(q("addFreq"))q("addFreq").onclick=wrappedAddOccupied;
+  }
+
+  function bind(){
+    loadSaved();if(W.selectedDeviceId&&state.devices[W.selectedDeviceId])q("deviceSelect").value=W.selectedDeviceId;
+    restoreLocation();wrapCore();
+    q("wfSave").onclick=()=>{capture();persist();toast("Proyecto RF guardado")};q("wfExport").onclick=exportProject;q("wfImport").onclick=()=>q("wfFile").click();
+    q("wfFile").onchange=e=>e.target.files[0]&&importProject(e.target.files[0]);q("wfSheet").onclick=sheet;q("wfFieldMode").onclick=field;q("fieldClose").onclick=closeField;q("fieldSheet").onclick=sheet;
+    q("wfNewRegion").onclick=addLocation;q("wfDeleteRegion").onclick=deleteLocation;q("wfRegionSelect").onchange=e=>activateLocation(e.target.value);q("wfEditClose").onclick=closeEdit;q("wfEditSave").onclick=saveEdit;
+    ["wfProjectName","wfProduction","wfProjectDate","wfProjectNotes"].forEach(id=>q(id).addEventListener("input",schedule));
+    ["wfRegionName","wfRegionLocation"].forEach(id=>q(id).addEventListener("input",()=>{const r=currentLocation();r.name=q("wfRegionName").value.trim()||"Locación";r.location=q("wfRegionLocation").value.trim();renderRegionSelect();renderField();schedule()}));
+    q("deviceSelect").addEventListener("change",()=>{W.selectedDeviceId=q("deviceSelect").value;if(typeof renderDeviceInfo==="function")renderDeviceInfo();if(typeof calculate==="function")calculate();renderChannels();schedule()});
+    ["rangeMin","rangeMax","rangeMargin"].forEach(id=>q(id).addEventListener("change",()=>{const r=currentLocation();if(!r)return;r.rangeMin=Number(q("rangeMin").value)||r.rangeMin;r.rangeMax=Number(q("rangeMax").value)||r.rangeMax;r.rangeMargin=Number.isFinite(Number(q("rangeMargin").value))?Number(q("rangeMargin").value):r.rangeMargin;if(typeof calculate==="function")calculate();schedule()}));
+    ["coordinationProfile","minSeparation","imThreshold","resultCount","criticalFloor","strict"].forEach(id=>q(id)?.addEventListener("change",()=>{if(typeof calculate==="function")calculate();schedule()}));
+    q("clearAll").addEventListener("click",()=>setTimeout(()=>{capture();renderChannels();renderField();schedule()},0));
+    q("loadExample").addEventListener("click",()=>setTimeout(()=>{const r=currentLocation();r.channels=[];capture();renderChannels();renderField();schedule()},0));
+    q("importScan").addEventListener("click",()=>setTimeout(()=>{capture();renderChannels();renderField();schedule()},0));
+    window.addEventListener("beforeunload",()=>{try{persist()}catch(e){}});syncUI();setStatus("Guardado local");
+  }
+
+  window.CRF_WORKFLOW={removeChannel,useFrequency:wrappedCandidate,useSet:wrappedSet,startBackup,cancelBackup,useAsBackup,hasBackupTarget,backupLabel,openEdit,openField:field,closeField,
+    save:()=>{capture();persist();toast("Proyecto RF guardado")},downloadProject:exportProject,rfSheet:sheet};
+
+  (async()=>{for(let i=0;i<150;i++){if(Object.keys(state.devices||{}).length){bind();return}await new Promise(r=>setTimeout(r,20))}if(q("wfProjectName"))bind()})();
 })();

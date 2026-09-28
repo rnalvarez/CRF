@@ -36,11 +36,15 @@ Coordinar múltiples receptores UHF a mano es propenso a error: hay que dejar se
 
 ## Flujo de trabajo para rodaje
 
-La capa de workflow se apoya sobre el motor existente sin alterar sus cálculos. Permite guardar un proyecto de RF con varias locaciones/regiones independientes, relacionar cada frecuencia ocupada con su dispositivo, canal o identificador y función, registrar potencia/digital y hasta dos frecuencias de respaldo por canal. La coordinación puede guardarse automáticamente en el navegador, exportarse/importarse como archivo JSON y convertirse en una hoja RF imprimible. El botón **FIELD MODE** presenta una vista de operación simplificada para smartphone con canal, dispositivo, frecuencia principal y backups. Las frecuencias agregadas desde Recomendaciones pueden pasar directamente a esa ficha si se carga el identificador del canal; si no, siguen funcionando como frecuencias ocupadas anónimas para el motor.
+La capa de proyecto se mantiene deliberadamente delgada: primero se define el rango de trabajo y después se selecciona el dispositivo que se va a coordinar. Al cambiar de dispositivo, CRF vuelve a calcular automáticamente las frecuencias disponibles con el mismo motor RF.
 
-Las regiones son independientes: cada una conserva su rango operativo, margen, frecuencias ocupadas y asignaciones. Esto permite preparar varias locaciones dentro del mismo rodaje sin mezclar sus coordinaciones. El sistema no introduce un segundo mecanismo de bloqueo: una frecuencia asignada pasa a formar parte de las frecuencias ocupadas que utiliza el motor, manteniendo una única fuente operativa para el cálculo.
+Las frecuencias que ya están en uso siguen siendo la entrada principal del motor. Cuando se agrega una frecuencia manual o se pulsa **Usar esta frecuencia** en una recomendación, CRF crea automáticamente su ficha usando el dispositivo seleccionado. No existe un segundo formulario para dar de alta canales: la ficha se completa o corrige después con **Editar**.
 
-El escaneo sigue siendo opcional y se mantiene como entrada de frecuencias detectadas; el rango operativo continúa definiéndose explícitamente en CRF. La hoja RF y el FIELD MODE muestran la coordinación cargada, no una medición de espectro en tiempo real.
+Cada ficha conserva canal/identificador, función, dispositivo, frecuencia principal, potencia, modalidad digital, notas y hasta dos backups. Los backups nunca pasan a `occupied[]`: se seleccionan desde las propias Recomendaciones después de pulsar **BKP 1** o **BKP 2** sobre el canal correspondiente. Así siguen siendo alternativas y no contaminan las frecuencias activas.
+
+Un proyecto puede contener varias locaciones. Cada una conserva su rango operativo, margen, frecuencias ocupadas y fichas de canal de manera independiente; solo se muestra una locación a la vez. **Guardar** persiste el proyecto en el navegador; **Exportar/Importar** lo traslada como `.crf.json`. Los resultados calculados no se guardan y se regeneran al restaurar el proyecto.
+
+**FIELD MODE** es una vista operativa de solo lectura para set: canal, función, dispositivo, frecuencia principal y backups, sin score ni metodología. **Hoja RF** usa exactamente esos mismos datos y abre una hoja imprimible. El scan sigue siendo opcional y no ocupa un lugar central en el flujo.
 
 ## Diseño
 

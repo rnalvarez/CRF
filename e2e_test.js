@@ -215,19 +215,60 @@ async function main() {
     check("mezcla fuera+dentro de rango -> el tier final lo determina el de DENTRO", peorDentro&&r.tier===peorDentro.tier);
   }
 
-  // --- Workflow de producción: relación equipo/canal/frecuencia + backups + región ---
+  // --- Workflow de producción: proyecto delgado, relación automática equipo/frecuencia, backups, edición y locaciones ---
   doc.getElementById("deviceSelect").value = "deity_theos";
   doc.getElementById("deviceSelect").dispatchEvent(new window.Event("change"));
-  doc.getElementById("wfChannel").value = "LAV 01";
-  doc.getElementById("wfRole").value = "Actor";
-  doc.getElementById("wfAssignFreq").value = "590.100";
-  doc.getElementById("wfPower").value = "25";
-  doc.getElementById("wfBackup1").value = "591.100";
-  doc.getElementById("wfBackup2").value = "592.100";
-  doc.getElementById("wfAssignButton").onclick();
-  check("asignación crea relación canal/dispositivo/frecuencia", doc.getElementById("wfAssignments").innerHTML.includes("LAV 01") && doc.getElementById("wfAssignments").innerHTML.includes("Deity THEOS DBTX") && doc.getElementById("wfAssignments").innerHTML.includes("590.100"));
-  check("asignación conserva dos backups", doc.getElementById("wfAssignments").innerHTML.includes("591.100 MHz") && doc.getElementById("wfAssignments").innerHTML.includes("592.100 MHz"));
-  check("asignación entra en ocupadas del motor", doc.getElementById("occupiedList").innerHTML.includes("590.100 MHz"));
+  check("seleccionar equipo dispara recomendaciones automáticamente", doc.getElementById("results").querySelectorAll(".result").length > 0);
+
+  doc.getElementById("occupiedFreq").value = "590.100";
+  doc.getElementById("occupiedPower").value = "25";
+  doc.getElementById("occupiedDigital").checked = false;
+  doc.getElementById("addFreq").onclick();
+  check("agregar frecuencia crea automáticamente la ficha del canal", doc.getElementById("wfChannels").innerHTML.includes("CH 01") && doc.getElementById("wfChannels").innerHTML.includes("590.100"));
+  check("la ficha usa el dispositivo seleccionado", doc.getElementById("wfChannels").innerHTML.includes("Deity THEOS DBTX"));
+  check("la frecuencia sigue siendo ocupada por el motor", doc.getElementById("occupiedList").innerHTML.includes("590.100 MHz"));
+
+  const firstPrimary = doc.querySelector("#results .use-btn");
+  if(firstPrimary){
+    const beforeChannels = doc.querySelectorAll("#wfChannels .wf-channel").length;
+    firstPrimary.onclick();
+    check("usar una recomendación crea automáticamente un nuevo canal", doc.querySelectorAll("#wfChannels .wf-channel").length === beforeChannels + 1);
+  }else{
+    check("hay al menos una recomendación utilizable", false);
+  }
+
+  const firstChannel = [...doc.querySelectorAll("#wfChannels .wf-channel")][0];
+  const editButton = firstChannel?.querySelector(".wf-channel-actions .secondary");
+  if(editButton){
+    const m=editButton.getAttribute("onclick").match(/openEdit\('([^']+)'\)/);
+    window.CRF_WORKFLOW.startBackup(m[1],0);
+    const backupBtn = doc.querySelector("#results .backup-btn");
+    check("armar Backup 1 hace aparecer la acción de backup en recomendaciones", !!backupBtn);
+    if(backupBtn){
+      const backupFreq = parseFloat(backupBtn.closest(".result").querySelector(".freq").textContent);
+      window.CRF_WORKFLOW.useAsBackup(backupFreq);
+      check("la frecuencia de backup queda registrada y no se suma como ocupada", doc.getElementById("wfChannels").innerHTML.includes("BKP 1 "+backupFreq.toFixed(3)) && !doc.getElementById("occupiedList").innerHTML.includes(backupFreq.toFixed(3)+" MHz"));
+    }
+  }else{
+    check("existe al menos una ficha editable", false);
+  }
+
+  {
+    const editBtns=[...doc.querySelectorAll("#wfChannels .wf-channel-actions button")];
+    const on=editBtns.find(b=>b.textContent.includes("Editar"));
+    if(on){
+      const m=on.getAttribute("onclick").match(/openEdit\('([^']+)'\)/);
+      window.CRF_WORKFLOW.openEdit(m[1]);
+      doc.getElementById("wfEditChannel").value="LAV TEST";
+      doc.getElementById("wfEditRole").value="Actor";
+      doc.getElementById("wfEditNotes").value="Edición E2E";
+      doc.getElementById("wfEditSave").onclick();
+      check("editar canal actualiza la ficha visible", doc.getElementById("wfChannels").innerHTML.includes("LAV TEST") && doc.getElementById("wfChannels").innerHTML.includes("Edición E2E"));
+    }else{
+      check("existe al menos una ficha editable", false);
+    }
+  }
+
   doc.getElementById("wfProjectName").value = "Rodaje TEST CRF";
   doc.getElementById("wfProjectName").dispatchEvent(new window.Event("input", {bubbles:true}));
   doc.getElementById("wfRegionName").value = "Interior Casa";
@@ -235,15 +276,20 @@ async function main() {
   doc.getElementById("wfRegionLocation").value = "Locación A";
   doc.getElementById("wfRegionLocation").dispatchEvent(new window.Event("input", {bubbles:true}));
   doc.getElementById("wfSave").onclick();
-  check("guardar proyecto crea persistencia local", !!window.localStorage.getItem("crf.rfProject.v1"));
+  check("Guardar funciona y crea persistencia local", !!window.localStorage.getItem("crf.rfProject.v2"));
+
   doc.getElementById("wfNewRegion").onclick();
-  check("nueva locación conserva el proyecto y crea una región adicional", doc.getElementById("wfRegionSelect").options.length === 2 && doc.getElementById("wfProjectName").value === "Rodaje TEST CRF");
+  check("Nueva locación crea una segunda locación", doc.getElementById("wfRegionSelect").options.length === 2);
   doc.getElementById("wfRegionSelect").value = [...doc.getElementById("wfRegionSelect").options][0].value;
   doc.getElementById("wfRegionSelect").dispatchEvent(new window.Event("change"));
-  check("volver a la primera locación restaura sus canales", doc.getElementById("wfAssignments").innerHTML.includes("LAV 01"));
+  check("volver a la primera locación restaura sus canales", doc.getElementById("wfChannels").innerHTML.includes("LAV TEST"));
+
   window.CRF_WORKFLOW.openField();
-  check("FIELD MODE muestra el canal asignado", doc.getElementById("fieldAssignments").innerHTML.includes("LAV 01") && doc.getElementById("fieldAssignments").innerHTML.includes("590.100"));
+  check("FIELD MODE muestra los canales de la locación actual", doc.getElementById("fieldAssignments").innerHTML.includes("LAV TEST") && doc.getElementById("fieldAssignments").innerHTML.includes("MHz"));
   window.CRF_WORKFLOW.closeField();
+
+  const saved = JSON.parse(window.localStorage.getItem("crf.rfProject.v2"));
+  check("el proyecto conserva locaciones y canales", saved.version === 2 && saved.locations.length === 2 && saved.locations[0].channels.length > 0);
 
   console.log("\n=== RESULTADOS E2E ===");
   let allOk = true;
