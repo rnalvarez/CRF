@@ -20,7 +20,13 @@ function getRangeMargin(){
 async function init(){
   state.devices=await fetch("data/devices.json").then(r=>r.json());
   const sel=$("deviceSelect");
-  for(const [id,d] of Object.entries(state.devices)){
+  const deviceEntries=Object.entries(state.devices);
+  deviceEntries.sort(([idA],[idB])=>{
+    if(idA==="custom")return -1;
+    if(idB==="custom")return 1;
+    return 0;
+  });
+  for(const [id,d] of deviceEntries){
     const o=document.createElement("option"); o.value=id; o.textContent=d.name; sel.appendChild(o);
   }
   sel.addEventListener("change",renderDeviceInfo);
