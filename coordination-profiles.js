@@ -1,3 +1,10 @@
+/* CRF — perfiles de coordinación
+ * Copyright 2026 Ramiro N. Alvarez
+ * Licensed under the Apache License, Version 2.0.
+ * See LICENSE and NOTICE in the repository root.
+ *
+ * Developed with assistance from AI development tools.
+ */
 /* Coordination profiles: turn CRF from a purely mathematical screen into a
    field-oriented solution finder. The existing engine remains the scoring core;
    profiles change which IM products reach it and how much channel guard is used. */
