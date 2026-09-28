@@ -371,8 +371,7 @@
     if(!primary){toast("El canal principal ya no está presente en frecuencias ocupadas");return}
     const oldFreq=a.frequency,oldBackup=v,source=primary.source||"manual";
     a.frequency=oldBackup;
-    a.backups=a.backups||[null,null];
-    a.backups[slot]=oldFreq;
+    a.backups=[oldFreq,null];
     primary.freq=oldBackup;
     primary.powerMw=a.powerMw;
     primary.digital=a.digital;
@@ -417,11 +416,11 @@
   function sheet(){
     const p=payload(),r=currentLocation(),win=window.open("","_blank");
     if(!win){toast("El navegador bloqueó la Hoja RF");return}
-    const rows=(r.channels||[]).map(a=>'<tr><td>'+esc(a.channel)+'</td><td>'+esc(a.role||"")+'</td><td>'+esc(deviceName(a.deviceId))+'</td><td class="m">'+fmt(a.frequency)+' MHz</td><td class="m">'+(isBackupFrequency(a.backups?.[0])?fmt(a.backups[0])+" MHz":"—")+'</td><td class="m">'+(isBackupFrequency(a.backups?.[1])?fmt(a.backups[1])+" MHz":"—")+'</td><td>'+(a.powerMw?a.powerMw+" mW":"—")+'</td></tr>').join("");
+    const rows=(r.channels||[]).map(a=>'<tr><td>'+esc(a.channel)+'</td><td>'+esc(a.role||"")+'</td><td>'+esc(deviceName(a.deviceId))+'</td><td class="m">'+fmt(a.frequency)+' MHz</td><td class="m">'+(isBackupFrequency(a.backups?.[0])?fmt(a.backups[0])+" MHz":"—")+'</td><td>'+(a.powerMw?a.powerMw+" mW":"—")+'</td></tr>').join("");
     const raw=(r.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));
     const rawHtml=raw.length?'<h2>Frecuencias ocupadas sin ficha</h2><p>'+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")+'</p>':"";
-    win.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>CRF · Hoja RF</title><style>body{font:14px Arial,sans-serif;color:#111;padding:28px}h1{margin:0 0 5px}p{margin:4px 0 16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:7px;text-align:left}th{background:#eee}.m{font:14px monospace}.note{margin-top:18px;padding:10px;background:#f1f1f1}</style></head><body><h1>CRF · Hoja RF</h1><p><strong>'+esc(p.project.name)+'</strong> · '+esc(r.name)+(r.location?" · "+esc(r.location):"")+' · '+esc(p.project.date)+'</p><table><thead><tr><th>Canal</th><th>Función</th><th>Dispositivo</th><th>Principal</th><th>Backup 1</th><th>Backup 2</th><th>Potencia</th></tr></thead><tbody>'+
-      (rows||'<tr><td colspan="7">Sin canales identificados.</td></tr>')+
+    win.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>CRF · Hoja RF</title><style>body{font:14px Arial,sans-serif;color:#111;padding:28px}h1{margin:0 0 5px}p{margin:4px 0 16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:7px;text-align:left}th{background:#eee}.m{font:14px monospace}.note{margin-top:18px;padding:10px;background:#f1f1f1}</style></head><body><h1>CRF · Hoja RF</h1><p><strong>'+esc(p.project.name)+'</strong> · '+esc(r.name)+(r.location?" · "+esc(r.location):"")+' · '+esc(p.project.date)+'</p><table><thead><tr><th>Canal</th><th>Función</th><th>Dispositivo</th><th>Principal</th><th>Backup</th><th>Potencia</th></tr></thead><tbody>'+
+      (rows||'<tr><td colspan="6">Sin canales identificados.</td></tr>')+
       '</tbody></table>'+rawHtml+'<p class="note">CRF es un coordinador matemático/heurístico. Esta hoja representa la coordinación cargada y no una medición de espectro en tiempo real.</p><script>onload=function(){setTimeout(function(){print()},150)}<\\/script></body></html>');
     win.document.close();
   }
