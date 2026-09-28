@@ -25,7 +25,8 @@ async function main() {
   // concatenan y se evalúan juntos, replicando el comportamiento real de los <script> en serie.
   const appSrc = fs.readFileSync(path.join(__dirname, "app.js"), "utf8");
   const accordionSrc = fs.readFileSync(path.join(__dirname, "render-accordion.js"), "utf8");
-  dom.window.eval(appSrc + "\n" + accordionSrc);
+  const workflowSrc = fs.readFileSync(path.join(__dirname, "workflow.js"), "utf8");
+  dom.window.eval(appSrc + "\n" + accordionSrc + "\n" + workflowSrc);
 
   // init() es async (hace fetch); esperamos a que termine
   await new Promise((r) => setTimeout(r, 200));
@@ -37,6 +38,9 @@ async function main() {
 
   check("select de dispositivo poblado (27 perfiles)", doc.getElementById("deviceSelect").options.length === 27);
   check("deviceInfo tiene contenido tras init()", doc.getElementById("deviceInfo").innerHTML.length > 0);
+  check("workflow RF project está presente", !!doc.getElementById("wfProjectName") && !!doc.getElementById("wfAssignments"));
+  check("FIELD MODE está disponible", !!doc.getElementById("wfFieldMode") && !!doc.getElementById("fieldMode"));
+  check("proyecto inicial tiene una locación", doc.getElementById("wfRegionSelect").options.length === 1);
 
   // Cargar ejemplo (2 G4 + 2 BOYA) y calcular
   doc.getElementById("loadExample").onclick();
@@ -210,6 +214,36 @@ async function main() {
     const peorDentro=r.hits.filter(h=>h.inRange!==false&&h.tier!=="recomendado").sort((a,b)=>rank[b.tier]-rank[a.tier])[0];
     check("mezcla fuera+dentro de rango -> el tier final lo determina el de DENTRO", peorDentro&&r.tier===peorDentro.tier);
   }
+
+  // --- Workflow de producción: relación equipo/canal/frecuencia + backups + región ---
+  doc.getElementById("deviceSelect").value = "deity_theos";
+  doc.getElementById("deviceSelect").dispatchEvent(new window.Event("change"));
+  doc.getElementById("wfChannel").value = "LAV 01";
+  doc.getElementById("wfRole").value = "Actor";
+  doc.getElementById("wfAssignFreq").value = "590.100";
+  doc.getElementById("wfPower").value = "25";
+  doc.getElementById("wfBackup1").value = "591.100";
+  doc.getElementById("wfBackup2").value = "592.100";
+  doc.getElementById("wfAssignButton").onclick();
+  check("asignación crea relación canal/dispositivo/frecuencia", doc.getElementById("wfAssignments").innerHTML.includes("LAV 01") && doc.getElementById("wfAssignments").innerHTML.includes("Deity THEOS DBTX") && doc.getElementById("wfAssignments").innerHTML.includes("590.100"));
+  check("asignación conserva dos backups", doc.getElementById("wfAssignments").innerHTML.includes("591.100 MHz") && doc.getElementById("wfAssignments").innerHTML.includes("592.100 MHz"));
+  check("asignación entra en ocupadas del motor", doc.getElementById("occupiedList").innerHTML.includes("590.100 MHz"));
+  doc.getElementById("wfProjectName").value = "Rodaje TEST CRF";
+  doc.getElementById("wfProjectName").dispatchEvent(new window.Event("input", {bubbles:true}));
+  doc.getElementById("wfRegionName").value = "Interior Casa";
+  doc.getElementById("wfRegionName").dispatchEvent(new window.Event("input", {bubbles:true}));
+  doc.getElementById("wfRegionLocation").value = "Locación A";
+  doc.getElementById("wfRegionLocation").dispatchEvent(new window.Event("input", {bubbles:true}));
+  doc.getElementById("wfSave").onclick();
+  check("guardar proyecto crea persistencia local", !!window.localStorage.getItem("crf.rfProject.v1"));
+  doc.getElementById("wfNewRegion").onclick();
+  check("nueva locación conserva el proyecto y crea una región adicional", doc.getElementById("wfRegionSelect").options.length === 2 && doc.getElementById("wfProjectName").value === "Rodaje TEST CRF");
+  doc.getElementById("wfRegionSelect").value = [...doc.getElementById("wfRegionSelect").options][0].value;
+  doc.getElementById("wfRegionSelect").dispatchEvent(new window.Event("change"));
+  check("volver a la primera locación restaura sus canales", doc.getElementById("wfAssignments").innerHTML.includes("LAV 01"));
+  window.CRF_WORKFLOW.openField();
+  check("FIELD MODE muestra el canal asignado", doc.getElementById("fieldAssignments").innerHTML.includes("LAV 01") && doc.getElementById("fieldAssignments").innerHTML.includes("590.100"));
+  window.CRF_WORKFLOW.closeField();
 
   console.log("\n=== RESULTADOS E2E ===");
   let allOk = true;
