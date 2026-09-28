@@ -1,6 +1,6 @@
 # CRF — Coordinador de Frecuencias UHF
 
-Web app estática (sin backend, pensada para GitHub Pages) para coordinar frecuencias de sistemas de audio inalámbrico UHF — micrófonos, IFB — en producciones de cine y video. Dado un rango de trabajo, lo que ya está ocupado y el equipo que se quiere sumar, calcula y ordena frecuencias candidatas libres de conflicto.
+Web app estática (sin backend, pensada para GitHub Pages) para coordinar frecuencias de sistemas de audio inalámbrico UHF — micrófonos, IFB — en producciones de cine y video. Dado el rango de trabajo, el equipo y las frecuencias ya ocupadas, CRF evalúa separación e intermodulación, calcula y ordena candidatas y permite llevar la coordinación como proyecto de rodaje.
 
 ## Qué problema resuelve
 
@@ -26,21 +26,22 @@ Coordinar múltiples receptores UHF a mano es propenso a error: hay que dejar se
 
 ## Catálogo de dispositivos
 
-27 perfiles en `data/devices.json` — Sennheiser EW 100 G2/G3/G4 (por variante regional), BOYA BY-WM8 Pro, Deity THEOS, Wisycom MTP40S, Saramonic K9, Lectrosonics DCHT, RØDELink II, más un perfil **personalizable**: al elegirlo se abre un formulario (nombre, mínimo, máximo, paso) que promueve el perfil en caliente a un dispositivo de rango continuo apenas los tres valores son válidos — mismo motor de candidatos que cualquier equipo real, sin esperar a cargarlo en el JSON. Cada perfil declara además su modelo de generación de candidatos (bancos de canales o barrido continuo) y un flag de confianza — `verified` / `estimate` / `pending` — cuando el dato depende de la variante exacta del equipo o todavía no hay datasheet público.
+27 perfiles en `data/devices.json` — Sennheiser EW 100 G2/G3/G4 (por variante regional), BOYA BY-WM8 Pro, Deity THEOS, Wisycom MTP40S, Saramonic K9, Lectrosonics DCHT, RØDELink II, más un perfil **personalizable** que aparece primero en la lista. Al elegirlo se abre un formulario para definir nombre, mínimo, máximo y paso; una vez válidos, se comporta como un dispositivo de rango continuo usando el mismo motor de candidatos que los perfiles reales. La configuración del personalizado se guarda dentro del proyecto y se restaura al recargarlo o importarlo. Cada perfil declara además su modelo de generación de candidatos (bancos de canales o barrido continuo) y un flag de confianza — `verified` / `estimate` / `pending` — cuando el dato depende de la variante exacta del equipo o todavía no hay datasheet público.
 
 ## Otras herramientas
 
 - **Importar resultado de scan**: pegar texto de un analizador de espectro (cualquier separador: coma, espacio, tab) y cargar automáticamente como ocupadas las frecuencias que superen un umbral en dBm.
+- **Recomendaciones compactas**: CRF calcula hasta el máximo configurado (por defecto, 10). Se muestran 2 de entrada y las restantes quedan dentro de un desplegable claramente identificado, por ejemplo `Ver 8 recomendaciones más · 10 calculadas`.
 - **Detalle de IM colapsable**: cada resultado muestra su tabla de víctima/orden/producto/distancia/nivel dentro de un `<details>` desplegable (`render-accordion.js`), con la cantidad de advertencias resumida en el título.
 - **Usar esta frecuencia**: cada card de Recomendaciones tiene un botón que agrega esa candidata a "ocupadas" y recalcula al toque, sin volver a cargar el formulario de arriba — pensado para el uso típico en smartphone, eligiendo una frecuencia por vez para cada equipo. Buscar conjunto tiene el equivalente a nivel grupo: un botón que suma las N frecuencias encontradas de una sola vez, ya que ahí tiene sentido usarlas juntas.
 
 ## Flujo de trabajo para rodaje
 
-La capa de proyecto es deliberadamente fina: rango de trabajo → dispositivo → frecuencias ocupadas → recomendaciones. La lista de equipos/canales se muestra en un panel compacto desplegable y se genera desde las frecuencias ocupadas, sin un formulario paralelo.
+La capa de proyecto es deliberadamente fina: rango de trabajo → dispositivo → frecuencias ocupadas → recomendaciones. La lista de equipos/canales se muestra en un panel compacto desplegable y se genera desde las frecuencias ocupadas, sin un formulario paralelo. El dispositivo personalizado forma parte del proyecto y conserva su configuración al guardar, recargar o importar.
 
 Al agregar una frecuencia o pulsar **Usar esta frecuencia**, CRF crea automáticamente la ficha con el dispositivo seleccionado. El ejemplo **2 G4 + 2 BOYA** carga sus cuatro frecuencias ocupadas y sus cuatro fichas con el equipo correspondiente.
 
-Los **backups** se seleccionan únicamente de las frecuencias que CRF está ofreciendo en Recomendaciones para el dispositivo de ese canal. No se cargan a mano y no pasan a `occupied[]`. Antes de guardarlos, CRF vuelve a comprobar que la frecuencia sea válida para el equipo, que no esté ocupada y que la coordinación RF (separación + IM) no presente conflicto; también avisa si el scan la afecta. Los backups guardados se vuelven a evaluar cuando cambia el estado de la locación.
+El **backup** se selecciona directamente desde el canal, usando la misma lista de candidatas calculadas por CRF para ese dispositivo. El selector muestra todas las opciones disponibles y, al elegir una frecuencia, la guarda y la activa inmediatamente como principal; la frecuencia principal anterior pasa a ser el backup. El backup no se suma como una segunda frecuencia ocupada mientras permanece en reserva. Antes de activarlo, CRF vuelve a comprobar que la frecuencia sea válida para el equipo, que no esté ocupada y que la coordinación RF (separación + IM) no presente conflicto; también avisa si el scan la afecta. FIELD MODE usa el mismo mecanismo y permite activar el backup desde el puesto de trabajo.
 
 ### Rango de trabajo y scan
 
@@ -50,7 +51,16 @@ El panel de disponibilidad del scan muestra, para el dispositivo y rango actuale
 
 Así quedan separadas tres preguntas: **¿el equipo puede sintonizarla?**, **¿el scan detectó ocupación cerca?** y **¿la coordinación RF la considera apta por separación e intermodulación?** Una frecuencia libre del scan todavía debe pasar las Recomendaciones. El scan no cambia las fórmulas del motor RF.
 
-Un proyecto puede contener varias locaciones, cada una con rango, ocupadas, canales y datos de scan independientes. **Guardar / Exportar / Importar** conservan esta información junto con los parámetros del análisis. **FIELD MODE** y **Hoja RF** usan la misma fuente de datos.
+Un proyecto puede contener varias locaciones, cada una con rango, ocupadas, canales y datos de scan independientes. **Guardar / Exportar / Importar** conservan esta información junto con los parámetros del análisis y la configuración del dispositivo personalizado. **FIELD MODE** y **Hoja RF** usan la misma fuente de datos.
+
+## Flujo operativo actual
+
+1. Definir el **rango de trabajo** y el margen de análisis.
+2. Seleccionar el dispositivo en **CH.02**. El **Dispositivo personalizado** aparece como primera opción y permite cargar nombre, mínimo, máximo y paso.
+3. Agregar las frecuencias ya ocupadas o importar un scan. Las frecuencias ocupadas generan automáticamente las fichas de canales/equipos.
+4. Ejecutar **Recomendaciones**. Por defecto se calculan hasta **10 candidatas**; 2 se muestran inicialmente y las restantes quedan en un desplegable para mantener la interfaz compacta.
+5. Usar una candidata como frecuencia principal. Para cada canal, el **BACKUP** se elige desde la misma lista de candidatas y se activa inmediatamente al seleccionarlo.
+6. En **FIELD MODE**, cada canal puede desplegarse para consultar y activar su backup. **Hoja RF** refleja la principal y el backup vigente.
 
 ## Diseño
 
@@ -80,8 +90,8 @@ npm install
 npm test
 ```
 
-Corre `node --check app.js` + `e2e_test.js`: motor de IM, clasificación de 4 niveles, auto-conflictos, danger zones, in-range/fuera-de-rango y el acordeón de detalle — 24 checks en total.
+Corre `node --check app.js` + `e2e_test.js`: motor de IM, clasificación, auto-conflictos, danger zones, rango, flujo de recomendaciones, persistencia del dispositivo personalizado y FIELD MODE. El harness de E2E se mantiene como regresión del flujo completo.
 
 ## Límites, por diseño
 
-El motor es matemático/heurístico: no modela IP3, bloqueo del receptor, ganancia de antena, distancia real TX/RX, aislación entre antenas ni potencia efectiva radiada. Los perfiles de equipo marcados como *estimados* o *pendientes* dependen de la variante exacta o todavía no tienen datasheet público — hay que confirmar contra la unidad real. Ninguna recomendación acá reemplaza un scan RF en la locación ni determina legalidad o regulación del espectro.
+El motor es matemático/heurístico: no modela IP3, bloqueo del receptor, ganancia de antena, distancia real TX/RX, aislación entre antenas ni potencia efectiva radiada. Los perfiles de equipo marcados como *estimados* o *pendientes* dependen de la variante exacta o todavía no tienen datasheet público — hay que confirmar contra la unidad real. Ninguna recomendación acá reemplaza una medición de espectro en la locación ni determina legalidad o regulación del espectro.
