@@ -307,7 +307,7 @@
   }
 
   function wrappedLoadExample(){coreLoadExample();const r=currentLocation();if(r){r.scan={threshold:-55,guard:0.25,points:[]};registerExampleChannels()}q("scanText").value="";q("scanStatus").textContent="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
-  function wrappedClearAll(){coreClearAll();const r=currentLocation();if(r){r.channels=[];r.scan.points=[]}q("scanText").value="";q("scanStatus").textContent="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
+  function wrappedClearAll(){coreClearAll();const r=currentLocation();if(r){r.channels=[];r.scan.points=[];r.scan.threshold=-55;r.scan.guard=0.25}q("scanText").value="";q("scanStatus").textContent="";q("setResults").innerHTML="";q("scanAvailability").innerHTML="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
   function wrappedImportScan(){const txt=q("scanText").value,th=Number(q("scanThreshold").value),parsed=typeof parseScanText==="function"?parseScanText(txt):[],threshold=Number.isFinite(th)?th:-55;coreImportScan();const r=currentLocation();if(r)r.scan={threshold,guard:Math.max(0,Number(q("scanGuard").value)||0),points:parsed};capture();renderChannels();renderField();renderScanAvailability();schedule()}
 
   function bind(){
