@@ -1,3 +1,10 @@
+/* CRF — Coordinador de Frecuencias UHF
+ * Copyright 2026 Ramiro N. Alvarez
+ * Licensed under the Apache License, Version 2.0.
+ * See LICENSE and NOTICE in the repository root.
+ *
+ * Developed with assistance from AI development tools.
+ */
 const state={devices:{},occupied:[]}; // occupied: [{freq, powerMw, digital, source}]
 
 const $=id=>document.getElementById(id);
