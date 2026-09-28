@@ -134,7 +134,8 @@
   function toast(s){const e=q("wfToast");e.textContent=s;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)}
   function bind(){
     let raw=null;try{raw=localStorage.getItem(STORE)}catch(e){}
-    normProject(raw?JSON.parse(raw):{});loadRegion(region());syncUI();
+    let saved=null;try{saved=raw?JSON.parse(raw):null}catch(e){saved=null}
+    normProject(saved||{});loadRegion(region());syncUI();
     ["wfProjectName","wfProduction","wfProjectDate","wfProjectNotes"].forEach(id=>q(id).addEventListener("input",schedule));
     ["wfRegionName","wfRegionLocation"].forEach(id=>q(id).addEventListener("input",()=>{const r=region();r.name=q("wfRegionName").value.trim()||"Locacion";r.location=q("wfRegionLocation").value.trim();q("wfRegionSelect").querySelector('option[value="'+r.id+'"]').textContent=r.name;renderField();schedule()}));
     q("wfRegionSelect").addEventListener("change",e=>activate(e.target.value));q("wfNewRegion").onclick=addRegion;q("wfDeleteRegion").onclick=delRegion;
