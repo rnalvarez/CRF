@@ -9,6 +9,7 @@
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   let W={project:{name:"Mi rodaje",production:"",date:new Date().toISOString().slice(0,10),notes:""},regions:[],active:null};
   const dev=id=>state.devices?.[id]||null;
+  const deviceId=()=>q("wfDeviceSelect")?.value||q("deviceSelect")?.value||"";
   const region=()=>W.regions.find(r=>r.id===W.active)||W.regions[0];
 
   function freshRegion(name){
@@ -58,9 +59,11 @@
     q("wfRegionName").value=r.name;
     q("wfRegionLocation").value=r.location;
     q("wfRegionSelect").innerHTML=W.regions.map(x=>"<option value=\""+esc(x.id)+"\">"+esc(x.name)+"</option>").join("");
+    q("wfDeviceSelect").innerHTML=Object.entries(state.devices||{}).map(([id,d])=>"<option value=\""+esc(id)+"\">"+esc(d.name)+"</option>").join("");
+    q("wfDeviceSelect").value=q("deviceSelect").value;
     q("wfRegionSelect").value=W.active;
     q("rangeMin").value=r.rangeMin;q("rangeMax").value=r.rangeMax;q("rangeMargin").value=r.rangeMargin;
-    const d=dev(q("deviceSelect").value);
+    const d=dev(deviceId());
     q("wfTargetDevice").textContent=d?.name||"Elegi un dispositivo en CH.03";
     if(d?.powerOptionsMw?.length&&!q("wfPower").value)q("wfPower").value=d.powerOptionsMw[0];
     if(d?.modulation)q("wfDigital").checked=d.modulation==="digital";
@@ -75,7 +78,7 @@
     const r=region(),d=dev(q("deviceSelect").value),freq=Number(freqOverride??q("wfAssignFreq").value),ch=q("wfChannel").value.trim();
     if(!Number.isFinite(freq)||!ch)return toast("Completa frecuencia y canal / identificador");
     const p=Number(q("wfPower").value);
-    const a={id:uid(),deviceId:q("deviceSelect").value,deviceName:d?.name||"Dispositivo",channel:ch,role:q("wfRole").value.trim(),frequency:freq,
+    const a={id:uid(),deviceId:deviceId(),deviceName:d?.name||"Dispositivo",channel:ch,role:q("wfRole").value.trim(),frequency:freq,
       powerMw:Number.isFinite(p)&&p>0?p:null,digital:q("wfDigital").checked,backups:[q("wfBackup1").value.trim(),q("wfBackup2").value.trim()],notes:q("wfAssignNotes").value.trim()};
     if(!state.occupied.some(o=>near(o.freq,freq)))state.occupied.push({freq,powerMw:a.powerMw,digital:a.digital,source:"assigned"});
     else{const o=state.occupied.find(o=>near(o.freq,freq));o.powerMw=a.powerMw;o.digital=a.digital}
@@ -142,6 +145,7 @@
     q("wfSave").onclick=()=>{saveLocal();toast("Proyecto RF guardado")};q("wfExport").onclick=exportProject;q("wfImport").onclick=()=>q("wfFile").click();q("wfFile").onchange=e=>e.target.files[0]&&importProject(e.target.files[0]);
     q("wfSheet").onclick=sheet;q("wfFieldMode").onclick=field;q("fieldClose").onclick=closeField;q("fieldSheet").onclick=sheet;q("wfAssignButton").onclick=()=>addAssignment();q("wfAssignClear").onclick=clearForm;
     q("deviceSelect").addEventListener("change",()=>{syncUI();schedule()});
+    q("wfDeviceSelect").addEventListener("change",()=>{q("deviceSelect").value=q("wfDeviceSelect").value;q("deviceSelect").dispatchEvent(new Event("change"));});
     ["rangeMin","rangeMax","rangeMargin"].forEach(id=>q(id).addEventListener("input",()=>{const r=region();r.rangeMin=+q("rangeMin").value||r.rangeMin;r.rangeMax=+q("rangeMax").value||r.rangeMax;r.rangeMargin=+q("rangeMargin").value||2;renderField();schedule()}));
     document.addEventListener("click",()=>setTimeout(()=>{capture();schedule();renderAssignments();renderField()},0));
     window.addEventListener("beforeunload",()=>{try{persist()}catch(e){}});
