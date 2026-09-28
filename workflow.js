@@ -13,8 +13,9 @@
   const normalizeBackup=x=>{
     if(x===null||x===undefined||x==="")return null;
     const n=Number(x);
-    return Number.isFinite(n)?n:null;
+    return Number.isFinite(n)&&n>0?n:null;
   };
+  const isBackupFrequency=x=>Number.isFinite(Number(x))&&Number(x)>0;
 
   let W={version:2,project:{name:"Mi rodaje",production:"",date:today(),notes:""},selectedDeviceId:"",locations:[],activeLocationId:null};
   let backupTarget=null,editingId=null;
@@ -125,7 +126,7 @@
     out.tier=sc.tier;out.tierLabel=sc.tierLabel;out.score=sc.score;out.hits=sc.hits||[];return out;
   }
   function backupStatus(a,slot){
-    const v=(a.backups||[])[slot];if(!Number.isFinite(Number(v)))return '<span class="backup-status empty">BKP '+(slot+1)+' —</span>';
+    const v=(a.backups||[])[slot];if(!isBackupFrequency(v))return '<span class="backup-status empty">BKP '+(slot+1)+' —</span>';
     const ev=evaluateFrequency(Number(v),a.deviceId);let s=ev.possible?ev.tierLabel:"⚠ no válida para el equipo";if(ev.scan?.blocked)s+=" · ⚠ SCAN";
     return '<span class="backup-status'+(ev.tier==="recomendado"&&ev.possible?'':' invalid')+'">BKP '+(slot+1)+' '+fmt(v)+' · '+esc(s)+'</span>';
   }
@@ -143,7 +144,7 @@
     const active=backupTarget&&backupTarget.id===a.id&&backupTarget.slot===slot;
     const v=(a.backups||[])[slot];
     return '<div class="wf-backup-cell"><button type="button" class="text-btn '+(active?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\','+slot+')">'+backupStatus(a,slot)+'</button>'+
-      (Number.isFinite(Number(v))?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\''+esc(a.id)+'\','+slot+')">Activar</button>':"")+
+      (isBackupFrequency(v)?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\''+esc(a.id)+'\','+slot+')">Activar</button>':"")+
       '</div>';
   }
   function renderBackupHint(){
@@ -155,7 +156,7 @@
 
   function renderField(){
     const r=currentLocation();if(!r)return;q("fieldProjectName").textContent=W.project.name;q("fieldRegionName").textContent=r.name+(r.location?" · "+r.location:"");const b=q("fieldAssignments");
-    b.innerHTML=(r.channels||[]).length?r.channels.map(a=>{const bx=(a.backups||[]).filter(Number.isFinite);return '<article class="field-row"><div><div class="field-label">'+esc(a.channel)+'</div><div class="field-sub">'+esc(deviceName(a.deviceId))+(a.role?" · "+esc(a.role):"")+'</div></div><div class="field-freq">'+fmt(a.frequency)+' <span>MHz</span></div><div class="field-backups">'+(bx.length?bx.map((v,i)=>{const ev=evaluateFrequency(v,a.deviceId);return "BKP "+(i+1)+" · "+fmt(v)+(ev.scan?.blocked?" ⚠ SCAN":"")+(ev.tier!=="recomendado"?" · "+ev.tierLabel:"")}).join(" · "):"Sin backup asignado")+'</div></article>'}).join(""):'<div class="field-empty">No hay canales identificados en esta locación.</div>';
+    b.innerHTML=(r.channels||[]).length?r.channels.map(a=>{const bx=(a.backups||[]).filter(isBackupFrequency);return '<article class="field-row"><div><div class="field-label">'+esc(a.channel)+'</div><div class="field-sub">'+esc(deviceName(a.deviceId))+(a.role?" · "+esc(a.role):"")+'</div></div><div class="field-freq">'+fmt(a.frequency)+' <span>MHz</span></div><div class="field-backups">'+(bx.length?bx.map((v,i)=>{const ev=evaluateFrequency(v,a.deviceId);return "BKP "+(i+1)+" · "+fmt(v)+(ev.scan?.blocked?" ⚠ SCAN":"")+(ev.tier!=="recomendado"?" · "+ev.tierLabel:"")}).join(" · "):"Sin backup asignado")+'</div></article>'}).join(""):'<div class="field-empty">No hay canales identificados en esta locación.</div>';
     const raw=(state.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));q("fieldUnassigned").textContent=raw.length?("Frecuencias ocupadas sin ficha: "+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")):"";
   }
   function syncUI(){
