@@ -493,7 +493,7 @@ function calculate(){
   const dangerZones=precomputeDangerZones(state.occupied,5,relevantRange);
   const results=candidates.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm,d,dangerZones))
     .sort((a,b)=>TIER_RANK[a.tier]-TIER_RANK[b.tier]||b.score-a.score)
-    .slice(0,parseInt($("resultCount").value)||20);
+    .slice(0,parseInt($("resultCount").value)||10);
   $("results").innerHTML=renderCandidateResults(results); // renderCandidateResults vive en render-accordion.js (se carga después de este script)
 }
 
