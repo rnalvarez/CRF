@@ -4,6 +4,8 @@ function renderCandidateResult(r, i) {
     .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier] || a.dist - b.dist);
 
   const warningCount = relevantHits.length;
+  const scan = window.CRF_WORKFLOW && CRF_WORKFLOW.scanAssessment ? CRF_WORKFLOW.scanAssessment(r.cand.freq) : {blocked:false};
+  const scanFlag = scan.blocked ? '<div class="scan-result-flag">⚠ SCAN: '+fmt(scan.nearest.freq)+' MHz · zona ±'+fmt(scan.guard)+' MHz</div>' : '';
 
   const tableRows = relevantHits.map(h => `
     <tr>
@@ -33,7 +35,7 @@ function renderCandidateResult(r, i) {
         <div><span class="freq">${fmt(r.cand.freq)} MHz</span><div class="meta">${r.cand.label}</div></div>
         <div class="score">${r.tierLabel}<br><small>${Math.round(r.score)}/100</small></div>
       </div>
-      <div class="bar"><span style="width:${r.score}%"></span></div>
+      ${scanFlag}<div class="bar"><span style="width:${r.score}%"></span></div>
       <div class="small-grid">
         <div class="metric"><b>${fmt(r.minSep)} MHz</b>Separación mínima</div>
         <div class="metric"><b>${r.orderCounts[2]}</b>Productos IM2</div>
