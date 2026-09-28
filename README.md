@@ -36,15 +36,21 @@ Coordinar múltiples receptores UHF a mano es propenso a error: hay que dejar se
 
 ## Flujo de trabajo para rodaje
 
-La capa de proyecto se mantiene deliberadamente delgada: primero se define el rango de trabajo y después se selecciona el dispositivo que se va a coordinar. Al cambiar de dispositivo, CRF vuelve a calcular automáticamente las frecuencias disponibles con el mismo motor RF.
+La capa de proyecto es deliberadamente fina: rango de trabajo → dispositivo → frecuencias ocupadas → recomendaciones. La lista de equipos/canales se muestra en un panel compacto desplegable y se genera desde las frecuencias ocupadas, sin un formulario paralelo.
 
-Las frecuencias que ya están en uso siguen siendo la entrada principal del motor. Cuando se agrega una frecuencia manual o se pulsa **Usar esta frecuencia** en una recomendación, CRF crea automáticamente su ficha usando el dispositivo seleccionado. No existe un segundo formulario para dar de alta canales: la ficha se completa o corrige después con **Editar**.
+Al agregar una frecuencia o pulsar **Usar esta frecuencia**, CRF crea automáticamente la ficha con el dispositivo seleccionado. El ejemplo **2 G4 + 2 BOYA** carga sus cuatro frecuencias ocupadas y sus cuatro fichas con el equipo correspondiente.
 
-Cada ficha conserva canal/identificador, función, dispositivo, frecuencia principal, potencia, modalidad digital, notas y hasta dos backups. Los backups nunca pasan a `occupied[]`: se seleccionan desde las propias Recomendaciones después de pulsar **BKP 1** o **BKP 2** sobre el canal correspondiente. Así siguen siendo alternativas y no contaminan las frecuencias activas.
+Los **backups** se seleccionan únicamente de las frecuencias que CRF está ofreciendo en Recomendaciones para el dispositivo de ese canal. No se cargan a mano y no pasan a `occupied[]`. Antes de guardarlos, CRF vuelve a comprobar que la frecuencia sea válida para el equipo, que no esté ocupada y que la coordinación RF (separación + IM) no presente conflicto; también avisa si el scan la afecta. Los backups guardados se vuelven a evaluar cuando cambia el estado de la locación.
 
-Un proyecto puede contener varias locaciones. Cada una conserva su rango operativo, margen, frecuencias ocupadas y fichas de canal de manera independiente; solo se muestra una locación a la vez. **Guardar** persiste el proyecto en el navegador; **Exportar/Importar** lo traslada como `.crf.json`. Los resultados calculados no se guardan y se regeneran al restaurar el proyecto.
+### Rango de trabajo y scan
 
-**FIELD MODE** es una vista operativa de solo lectura para set: canal, función, dispositivo, frecuencia principal y backups, sin score ni metodología. **Hoja RF** usa exactamente esos mismos datos y abre una hoja imprimible. El scan sigue siendo opcional y no ocupa un lugar central en el flujo.
+El **rango de trabajo** define dónde puede sintonizar el equipo; no significa que todo ese espacio esté disponible en la locación. El **scan** es una segunda capa ambiental: las señales que superan el umbral se incorporan como ocupadas y, además, generan una zona de protección configurable alrededor de cada señal detectada.
+
+El panel de disponibilidad del scan muestra, para el dispositivo y rango actuales, cuántas candidatas están ocupadas, cuántas quedan afectadas por las zonas del scan y cuántas quedan libres del entorno. Las Recomendaciones marcan directamente una candidata afectada por scan y piden confirmación antes de usarla.
+
+Así quedan separadas tres preguntas: **¿el equipo puede sintonizarla?**, **¿el scan detectó ocupación cerca?** y **¿la coordinación RF la considera apta por separación e intermodulación?** Una frecuencia libre del scan todavía debe pasar las Recomendaciones. El scan no cambia las fórmulas del motor RF.
+
+Un proyecto puede contener varias locaciones, cada una con rango, ocupadas, canales y datos de scan independientes. **Guardar / Exportar / Importar** conservan esta información junto con los parámetros del análisis. **FIELD MODE** y **Hoja RF** usan la misma fuente de datos.
 
 ## Diseño
 
