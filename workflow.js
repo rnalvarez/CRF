@@ -48,9 +48,9 @@
       const scan=scanAssessment(r.cand.freq),scanText=scan.blocked?" · ⚠ SCAN":"";
       return '<option value="'+fmt(r.cand.freq)+'"'+(isBackupFrequency(value)&&near(r.cand.freq,value)?" selected":"")+'>'+fmt(r.cand.freq)+' MHz · '+esc(r.tierLabel||r.cand.label)+scanText+'</option>';
     }).join("");
-    const placeholder=isBackupFrequency(value)?"<option value="">Cambiar backup…</option>":"<option value="">Elegir frecuencia…</option>";
-    return '<div class="wf-backup-select"><select aria-label="Backup '+(slot+1)+' de '+esc(a.channel||"canal")+'" onchange="CRF_WORKFLOW.selectBackup(\\''+esc(a.id)+'\\','+slot+',this.value)">'+placeholder+options+'</select>'+
-      (isBackupFrequency(value)?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\\''+esc(a.id)+'\\','+slot+')">Activar</button>':"")+
+    const placeholder=isBackupFrequency(value)?"<option value=\"\">Cambiar backup…</option>":"<option value=\"\">Elegir frecuencia…</option>";
+    return '<div class="wf-backup-select"><select class="backup-frequency-select" aria-label="Backup '+(slot+1)+' de '+esc(a.channel||"canal")+'" data-channel-id="'+esc(a.id)+'" data-slot="'+slot+'">'+placeholder+options+'</select>'+
+      (isBackupFrequency(value)?'<button type="button" class="secondary backup-activate-btn" data-backup-channel-id="'+esc(a.id)+'" data-backup-slot="'+slot+'">Activar</button>':"")+
       '</div>';
   }
 
@@ -175,7 +175,16 @@
       box.innerHTML=channels.map(a=>{const active=backupTarget&&backupTarget.id===a.id;return '<article class="wf-channel'+(active?' is-backup-target':'')+'"><div class="wf-channel-main"><div class="wf-channel-name">'+esc(a.channel)+'<span>'+esc(a.role||"")+'</span></div><div class="wf-channel-device">'+esc(deviceName(a.deviceId))+(a.digital?" · digital":"")+(a.powerMw?(" · "+esc(a.powerMw)+" mW"):"")+'</div></div><div class="wf-channel-freq">'+fmt(a.frequency)+'<small>MHz</small></div><div class="wf-channel-backups">'+renderBackupCell(a,0)+renderBackupCell(a,1)+'</div><div class="wf-channel-actions"><button type="button" class="secondary" onclick="CRF_WORKFLOW.openEdit(\''+esc(a.id)+'\')">Editar</button><button type="button" class="secondary" onclick="CRF_WORKFLOW.removeChannel(\''+esc(a.id)+'\')">Quitar</button></div>'+(a.notes?'<div class="wf-channel-notes">'+esc(a.notes)+'</div>':'')+'</article>'}).join("");
       if(unassigned.length)box.innerHTML+='<div class="wf-unassigned"><strong>Ocupadas sin ficha</strong><span>'+unassigned.map(o=>fmt(o.freq)+" MHz").join(" · ")+'</span><small>Las frecuencias detectadas por scan permanecen aquí sin convertirse en canales.</small></div>';
     }
-    renderBackupHint();renderScanAvailability();
+    bindBackupControls();renderBackupHint();renderScanAvailability();
+  }
+  function bindBackupControls(){
+    const box=q("wfChannels");if(!box)return;
+    box.querySelectorAll(".backup-frequency-select").forEach(sel=>{
+      sel.onchange=()=>selectBackup(sel.dataset.channelId,Number(sel.dataset.slot),sel.value);
+    });
+    box.querySelectorAll(".backup-activate-btn").forEach(btn=>{
+      btn.onclick=()=>activateBackup(btn.dataset.backupChannelId,Number(btn.dataset.backupSlot));
+    });
   }
   function renderBackupCell(a,slot){return backupOptionHTML(a,slot);}
   function renderBackupHint(){
