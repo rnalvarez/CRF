@@ -216,6 +216,81 @@ details.help[open] summary{background:var(--accent);color:var(--accent-ink)}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .toast strong{color:var(--recomendado);font-family:var(--font-mono)}
 
+/* --- Workflow de produccion --- */
+.workflow-card{border-top-color:var(--accent)}
+.workflow-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.workflow-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.workflow-project-grid{display:grid;grid-template-columns:1.4fr 1fr .7fr 1.4fr;gap:10px;margin-top:14px}
+.workflow-span-2{grid-column:span 2}
+.workflow-region-bar{display:grid;grid-template-columns:.8fr 1fr 1.3fr auto;gap:10px;align-items:end;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)}
+.region-actions{align-self:end}
+.workflow-assignment-wrap{margin-top:16px;padding-top:15px;border-top:1px solid var(--border)}
+.workflow-subhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.workflow-subhead h3{margin:0 0 3px;font:700 14px var(--font-display);text-transform:uppercase;letter-spacing:.04em}
+.workflow-save-status{color:var(--recomendado);font:600 11px var(--font-mono);white-space:nowrap;padding-top:2px}
+.wf-assignments{display:grid;gap:7px;margin-top:10px}
+.wf-assignment{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 12px;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.wf-channel{font:700 13.5px var(--font-body);color:var(--text)}
+.wf-channel span{font-weight:400;color:var(--text-dim);margin-left:6px}
+.wf-device{margin-top:2px;color:var(--text-dim);font-size:12px}
+.wf-frequency{font:600 18px var(--font-mono);white-space:nowrap}
+.wf-frequency small{font:400 10px var(--font-body);color:var(--text-dim);margin-left:4px}
+.wf-extra{grid-column:1/-1;color:var(--text-dim);font-size:11.5px;padding-top:6px;border-top:1px solid var(--border-soft)}
+.wf-empty{padding:11px 13px;color:var(--text-dim);background:var(--panel-2);border:1px dashed var(--border);border-radius:var(--radius-sm);font-size:12.5px}
+.wf-form{margin-top:11px;padding:12px 13px;background:rgba(178,124,240,.055);border:1px solid rgba(178,124,240,.23);border-radius:var(--radius-sm)}
+.workflow-form-label{font:700 12px var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.workflow-target{margin:6px 0 10px;color:var(--text-dim);font-size:12.5px}
+.workflow-target strong{color:var(--text)}
+.workflow-project-grid.compact{margin-top:0;grid-template-columns:1fr 1fr 1fr 1fr}
+.workflow-digital{margin:8px 0 10px}
+.workflow-tools{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);display:flex;justify-content:space-between;gap:12px;align-items:center}
+.workflow-tools>div:first-child{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.workflow-tools strong{font-size:12.5px}
+.wf-actions{display:flex;gap:6px}
+.wf-actions .secondary{padding:8px 10px;font-size:12px}
+
+/* --- FIELD MODE --- */
+.field-mode{position:fixed;inset:0;background:rgba(8,10,13,.92);backdrop-filter:blur(7px);z-index:90;display:none;overflow:auto}
+.field-mode.show{display:block}
+.field-screen{max-width:900px;margin:0 auto;padding:22px 16px 32px;min-height:100%}
+.field-screen-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding-bottom:15px;border-bottom:1px solid var(--border)}
+.field-kicker{font:600 11px var(--font-mono);letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+.field-screen h2{font-size:20px;margin:6px 0 2px}
+.field-region-name{margin:0;color:var(--text-dim);font-size:13px}
+.field-assignments{display:grid;gap:8px;margin-top:15px}
+.field-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"main freq" "main backup";gap:5px 15px;padding:15px;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--recomendado);border-radius:var(--radius-sm);align-items:center}
+.field-label{font:700 17px var(--font-display);text-transform:uppercase;letter-spacing:.03em}
+.field-sub{margin-top:3px;color:var(--text-dim);font-size:12.5px}
+.field-freq{grid-area:freq;font:600 30px var(--font-mono);text-align:right;white-space:nowrap}
+.field-freq span{font:400 11px var(--font-body);color:var(--text-dim);margin-left:4px}
+.field-backups{grid-area:backup;color:var(--text-dim);font:500 11px var(--font-mono);text-align:right;min-height:14px}
+.field-empty{padding:20px;background:var(--panel);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--text-dim);text-align:center}
+.field-footnote{margin:13px 2px 0;color:var(--text-faint);font-size:11px;text-align:center}
+
+body.field-open{overflow:hidden}
+@media(max-width:760px){
+  .workflow-head{flex-direction:column}
+  .workflow-head .workflow-actions{width:100%}
+  .workflow-head .workflow-actions button{flex:1}
+  .workflow-project-grid{grid-template-columns:1fr 1fr}
+  .workflow-span-2{grid-column:1/-1}
+  .workflow-region-bar{grid-template-columns:1fr 1fr}
+  .region-actions{grid-column:1/-1}
+  .workflow-project-grid.compact{grid-template-columns:1fr 1fr}
+  .wf-assignment{grid-template-columns:1fr auto}
+  .wf-assignment>button{grid-column:2;grid-row:1}
+  .wf-frequency{grid-column:2;grid-row:1}
+  .wf-actions{grid-column:1/-1;grid-row:auto}
+  .workflow-tools{align-items:flex-start;flex-direction:column}
+  .workflow-tools .workflow-actions{width:100%}
+  .workflow-tools .workflow-actions button{flex:1}
+  .field-screen{padding:15px 12px 26px}
+  .field-screen-head{position:sticky;top:0;background:rgba(20,23,27,.96);padding:2px 0 12px;z-index:2}
+  .field-screen-head .workflow-actions button:first-child{display:none}
+  .field-row{padding:13px 12px}
+  .field-freq{font-size:25px}
+}
+
 @media(prefers-reduced-motion:reduce){
   button,.toast,.im-details>summary,details.help summary{transition:none}
 }
