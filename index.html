@@ -120,7 +120,14 @@
       <label class="check inline"><input id="occupiedDigital" type="checkbox"> digital</label>
       <button id="addFreq">Agregar</button>
     </div>
-    <p class="hint">Las frecuencias agregadas manualmente quedan vinculadas automáticamente al dispositivo seleccionado en CH.02. Las detectadas por scan permanecen como ocupadas externas.</p><div class="workflow-channel-head"><div><strong>Canales en uso</strong><span class="hint">La ficha se genera desde las frecuencias ocupadas; no hay un formulario paralelo.</span></div><span id="wfSaveStatus" class="project-status">Guardado local</span></div><div id="wfBackupHint" class="backup-hint" hidden></div><div id="wfChannels" class="wf-channels"></div><p class="hint">Potencia y "digital" son opcionales: si los cargás, el motor pondera separación e IM según la potencia real y descuenta parte de la penalización IM cuando todo lo que contribuye a un producto es digital de espectro angosto.</p>
+    <p class="hint">Las frecuencias agregadas manualmente quedan vinculadas automáticamente al dispositivo seleccionado en CH.02. Las detectadas por scan permanecen como ocupadas externas.</p><details id="wfChannelsDetails" class="channels-details">
+      <summary><strong>Equipos / canales en uso</strong><span id="wfChannelCount" class="channel-count">0</span><span class="channel-summary-hint">mostrar</span></summary>
+      <div class="channels-details-body">
+        <div class="workflow-channel-head"><div><strong>Canales en uso</strong><span class="hint">Se generan automáticamente desde las frecuencias ocupadas.</span></div><span id="wfSaveStatus" class="project-status">Guardado local</span></div>
+        <div id="wfBackupHint" class="backup-hint" hidden></div>
+        <div id="wfChannels" class="wf-channels"></div>
+      </div>
+    </details>
     <div id="occupiedList" class="chips"></div>
     <div id="selfConflicts" class="self-conflicts"></div>
     <div class="preset">
@@ -133,9 +140,11 @@
       <textarea id="scanText" rows="5" placeholder="566.200, -42&#10;574.100  -38.5&#10;581.925;-55"></textarea>
       <div class="row">
         <label class="inline-label">Umbral (dBm)<input id="scanThreshold" type="number" step="1" value="-55"></label>
+        <label class="inline-label">Protección alrededor de cada señal (MHz)<input id="scanGuard" type="number" min="0" step="0.025" value="0.250"></label>
         <button id="importScan" class="secondary">Importar</button>
       </div>
       <p id="scanStatus" class="hint"></p>
+      <div id="scanAvailability" class="scan-availability"></div>
     </details>
   </section>
 <section class="card">
