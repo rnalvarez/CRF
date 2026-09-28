@@ -240,11 +240,11 @@ async function main() {
       window.confirm=()=>true;
       window.CRF_WORKFLOW.useAsBackup(bf);
       check("backup no entra en occupied",!doc.getElementById("occupiedList").innerHTML.includes(bf.toFixed(3)+" MHz"));
+      window.CRF_WORKFLOW.save();
       const savedBackup=JSON.parse(window.localStorage.getItem("crf.rfProject.v3"));
       const savedChannel=savedBackup.locations.flatMap(x=>x.channels||[]).find(x=>x.id===m[1]);
       check("backup queda persistido en el proyecto",!!savedChannel&&Number(savedChannel.backups?.[0])===bf);
       window.CRF_WORKFLOW.activateBackup(m[1],0);
-      const activeChannel=savedChannel&&savedChannel; // referencia solo para el id; estado real se verifica abajo
       check("activar backup convierte la frecuencia en principal",doc.getElementById("occupiedList").innerHTML.includes(bf.toFixed(3)+" MHz")&&doc.getElementById("wfChannels").innerHTML.includes(bf.toFixed(3)));
       check("al activar backup la frecuencia principal anterior queda como backup",doc.getElementById("wfChannels").innerHTML.includes("BKP 1 "+(559.990).toFixed(3)));
     }
