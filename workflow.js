@@ -16,6 +16,43 @@
     return Number.isFinite(n)&&n>0?n:null;
   };
   const isBackupFrequency=x=>Number.isFinite(Number(x))&&Number(x)>0;
+  const BACKUP_TIER_RANK={recomendado:0,fuera_de_rango:1,revisar:2,advertencia:3,critico:4};
+  let backupRecommendationCache={signature:"",byDevice:{}};
+  function backupRecommendationSignature(){
+    const r=currentLocation(),occ=(state.occupied||[]).map(o=>[Number(o.freq),o.powerMw??null,!!o.digital,o.source||""]).sort((a,b)=>a[0]-b[0]);
+    return JSON.stringify([r?.id,r?.rangeMin,r?.rangeMax,r?.rangeMargin,Number(q("minSeparation")?.value),Number(q("imThreshold")?.value),!!q("strict")?.checked,Number(q("criticalFloor")?.value),Number(q("resultCount")?.value),occ]);
+  }
+  function getBackupRecommendations(deviceId){
+    const r=currentLocation(),d=state.devices?.[deviceId];
+    if(!r||!d||(d.candidateModel!=="channels"&&d.candidateModel!=="continuous"))return [];
+    const sig=backupRecommendationSignature();
+    if(backupRecommendationCache.signature!==sig)backupRecommendationCache={signature:sig,byDevice:{}};
+    if(backupRecommendationCache.byDevice[deviceId])return backupRecommendationCache.byDevice[deviceId];
+    const min=Number(q("rangeMin").value),max=Number(q("rangeMax").value),opts=analysisOptions();
+    if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min)return [];
+    const basePool=generateCandidates(d,min,max).filter(c=>!state.occupied.some(f=>Math.abs(f.freq-c.freq)<1e-6));
+    const relevantRange={min:min-getRangeMargin(),max:max+getRangeMargin()};
+    const allIm=intermods(state.occupied,5,relevantRange);
+    const dangerZones=precomputeDangerZones(state.occupied,5,relevantRange);
+    const rows=basePool.map(c=>scoreCandidate(c,state.occupied,min,max,opts,allIm,d,dangerZones))
+      .sort((a,b)=>BACKUP_TIER_RANK[a.tier]-BACKUP_TIER_RANK[b.tier]||b.score-a.score)
+      .slice(0,parseInt(q("resultCount").value)||20);
+    backupRecommendationCache.byDevice[deviceId]=rows;
+    return rows;
+  }
+  function backupOptionHTML(a,slot){
+    const value=(a.backups||[])[slot],rows=getBackupRecommendations(a.deviceId).slice();
+    if(isBackupFrequency(value)&&!rows.some(r=>near(r.cand.freq,value)))
+      rows.unshift({cand:{freq:Number(value),label:"Backup guardado"},tier:"recomendado",tierLabel:"✓ GUARDADO",score:0});
+    const options=rows.map(r=>{
+      const scan=scanAssessment(r.cand.freq),scanText=scan.blocked?" · ⚠ SCAN":"";
+      return '<option value="'+fmt(r.cand.freq)+'"'+(isBackupFrequency(value)&&near(r.cand.freq,value)?" selected":"")+'>'+fmt(r.cand.freq)+' MHz · '+esc(r.tierLabel||r.cand.label)+scanText+'</option>';
+    }).join("");
+    const placeholder=isBackupFrequency(value)?"<option value="">Cambiar backup…</option>":"<option value="">Elegir frecuencia…</option>";
+    return '<div class="wf-backup-select"><select aria-label="Backup '+(slot+1)+' de '+esc(a.channel||"canal")+'" onchange="CRF_WORKFLOW.selectBackup(\\''+esc(a.id)+'\\','+slot+',this.value)">'+placeholder+options+'</select>'+
+      (isBackupFrequency(value)?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\\''+esc(a.id)+'\\','+slot+')">Activar</button>':"")+
+      '</div>';
+  }
 
   let W={version:2,project:{name:"Mi rodaje",production:"",date:today(),notes:""},selectedDeviceId:"",locations:[],activeLocationId:null};
   let backupTarget=null,editingId=null;
@@ -140,17 +177,7 @@
     }
     renderBackupHint();renderScanAvailability();
   }
-  function renderBackupCell(a,slot){
-    const active=backupTarget&&backupTarget.id===a.id&&backupTarget.slot===slot;
-    const v=(a.backups||[])[slot];
-    const saved=isBackupFrequency(v);
-    const valueHtml=saved?'<span class="backup-frequency">'+fmt(v)+' <small>MHz</small></span>':'<span class="backup-empty">—</span>';
-    const actionLabel=saved?"Cambiar":"Elegir";
-    return '<div class="wf-backup-cell"><div class="wf-backup-line"><span class="backup-slot">BKP '+(slot+1)+'</span>'+valueHtml+'</div>'+
-      '<div class="wf-backup-actions"><button type="button" class="text-btn '+(active?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\','+slot+')">'+actionLabel+'</button>'+
-      (saved?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\''+esc(a.id)+'\','+slot+')">Activar</button>':"")+
-      '</div></div>';
-  }
+  function renderBackupCell(a,slot){return backupOptionHTML(a,slot);}
   function renderBackupHint(){
     const el=q("wfBackupHint");if(!el)return;
     if(!backupTarget){el.hidden=true;el.innerHTML="";return}
@@ -239,18 +266,39 @@
   }
   function hasBackupTarget(){return !!backupTarget}
   function backupLabel(){return backupTarget?"Usar como Backup "+(backupTarget.slot+1):""}
+  function selectBackup(id,slot,value){
+    if(value==="")return;
+    const n=Number(value);
+    if(!Number.isFinite(n)){toast("Frecuencia de backup inválida");return}
+    const ok=saveBackupForChannel(id,slot,n);
+    if(ok){renderChannels();renderField();renderScanAvailability();schedule();if(typeof calculate==="function")calculate()}
+  }
+  function saveBackupForChannel(id,slot,freq){
+    const r=currentLocation(),a=r?.channels?.find(x=>x.id===id);
+    if(!a){toast("Canal no encontrado");return false}
+    const ev=evaluateFrequency(freq,a.deviceId);if(!ev.possible){toast(fmt(freq)+" MHz no es una frecuencia válida para "+esc(deviceName(a.deviceId)));return false}
+    if(ev.scan?.blocked){
+      const where=ev.scan.nearest?fmt(ev.scan.nearest.freq)+" MHz":"la zona detectada";
+      if(window.confirm&&!window.confirm(fmt(freq)+" MHz está dentro de ±"+fmt(ev.scan.guard)+" MHz de una señal detectada en "+where+".\n\n¿Guardar como backup?"))return false
+    }
+    if(ev.tier!=="recomendado"){
+      const detail=ev.tierLabel+(ev.hits?.length?" · "+ev.hits.slice(0,2).map(h=>"IM"+h.order+" a "+fmt(h.dist)+" MHz").join(" · "):"");
+      if(window.confirm&&!window.confirm(fmt(freq)+" MHz no queda RECOMENDADA para "+esc(deviceName(a.deviceId))+": "+detail+".\n\n¿Guardar igualmente como backup?"))return false
+    }
+    if((state.occupied||[]).some(o=>near(o.freq,freq)&&!near(o.freq,a.frequency))){toast(fmt(freq)+" MHz ya está ocupada");return false}
+    if(near(freq,a.frequency)){toast("El backup no puede ser igual a la frecuencia principal");return false}
+    a.backups=a.backups||[null,null];a.backups[slot]=Number(freq);return true;
+  }
   function useAsBackup(freq){
-    if(!backupTarget){toast("Primero elegí BKP 1 o BKP 2 en un canal");return}
-    const r=currentLocation(),a=r?.channels?.find(x=>x.id===backupTarget.id);if(!a){backupTarget=null;return}
-    const ev=evaluateFrequency(freq,a.deviceId);if(!ev.possible){toast(fmt(freq)+" MHz no es una frecuencia válida para "+esc(deviceName(a.deviceId)));return}
-    if(ev.scan?.blocked){const where=ev.scan.nearest?fmt(ev.scan.nearest.freq)+" MHz":"la zona detectada";if(window.confirm&&!window.confirm(fmt(freq)+" MHz está dentro de ±"+fmt(ev.scan.guard)+" MHz de una señal detectada en "+where+".\n\n¿Guardar igualmente como backup?"))return}
-    if(ev.tier!=="recomendado"){const d=ev.tierLabel+(ev.hits?.length?" · "+ev.hits.slice(0,2).map(h=>"IM"+h.order+" a "+fmt(h.dist)+" MHz").join(" · "):"");if(window.confirm&&!window.confirm(fmt(freq)+" MHz no queda RECOMENDADA para "+esc(deviceName(a.deviceId))+": "+d+".\n\n¿Guardar igualmente como backup?"))return}
-    if((state.occupied||[]).some(o=>near(o.freq,freq)&&!near(o.freq,a.frequency))){toast(fmt(freq)+" MHz ya está ocupada");return}
-    if(near(freq,a.frequency)){toast("El backup no puede ser igual a la frecuencia principal");return}
-    a.backups=a.backups||[null,null];a.backups[backupTarget.slot]=Number(freq);const slot=backupTarget.slot+1,prev=backupTarget.previousDeviceId;backupTarget=null;
-    if(prev&&state.devices?.[prev]){q("deviceSelect").value=prev;W.selectedDeviceId=prev}
+    if(!backupTarget){toast("Primero elegí BKP 1 o BKP 2 en un canal");return false}
+    const target=backupTarget,ok=saveBackupForChannel(target.id,target.slot,Number(freq));
+    if(!ok)return false;
+    const slot=target.slot+1,a=currentLocation()?.channels?.find(x=>x.id===target.id);
+    backupTarget=null;
+    if(target.previousDeviceId&&state.devices?.[target.previousDeviceId]){q("deviceSelect").value=target.previousDeviceId;W.selectedDeviceId=target.previousDeviceId}
     capture();renderChannels();renderField();renderScanAvailability();schedule();if(typeof renderDeviceInfo==="function")renderDeviceInfo();if(typeof calculate==="function")calculate();
-    toast("✓ "+fmt(freq)+" MHz guardada como Backup "+slot+" de "+esc(a.channel));
+    toast("✓ "+fmt(freq)+" MHz guardada como Backup "+slot+" de "+esc(a?.channel||"canal"));
+    return true;
   }
 
   function activateBackup(id,slot){
@@ -389,7 +437,7 @@
     window.addEventListener("beforeunload",()=>{try{persist()}catch(e){}});syncUI();setStatus("Guardado local");
   }
 
-  window.CRF_WORKFLOW={scanAssessment,evaluateFrequency,removeChannel,useFrequency:wrappedCandidate,useSet:wrappedSet,startBackup,cancelBackup,useAsBackup,activateBackup,hasBackupTarget,backupLabel,openEdit,openField:field,closeField,
+  window.CRF_WORKFLOW={scanAssessment,evaluateFrequency,removeChannel,useFrequency:wrappedCandidate,useSet:wrappedSet,startBackup,cancelBackup,useAsBackup,selectBackup,activateBackup,hasBackupTarget,backupLabel,openEdit,openField:field,closeField,
     save:()=>{capture();persist();toast("Proyecto RF guardado")},downloadProject:exportProject,rfSheet:sheet};
 
   (async()=>{for(let i=0;i<150;i++){if(Object.keys(state.devices||{}).length){bind();return}await new Promise(r=>setTimeout(r,20))}if(q("wfProjectName"))bind()})();

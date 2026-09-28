@@ -43,7 +43,7 @@ function renderCandidateResult(r, i) {
         <div class="metric"><b>${r.orderCounts[4]}</b>Productos IM4</div>
         <div class="metric"><b>${r.orderCounts[5]}</b>Productos IM5</div>
       </div>
-      <div class="result-actions"><button type="button" class="use-btn" onclick="window.CRF_WORKFLOW ? CRF_WORKFLOW.useFrequency(${r.cand.freq}) : addCandidateAsOccupied(${r.cand.freq})">✓ Usar esta frecuencia</button>${window.CRF_WORKFLOW && CRF_WORKFLOW.hasBackupTarget() ? '<button type="button" class="secondary backup-btn" onclick="CRF_WORKFLOW.useAsBackup(${r.cand.freq})">✓ '+CRF_WORKFLOW.backupLabel()+'</button>' : ""}</div>
+            <div class="result-actions"><button type="button" class="use-btn" onclick="window.CRF_WORKFLOW ? CRF_WORKFLOW.useFrequency(${r.cand.freq}) : addCandidateAsOccupied(${r.cand.freq})">✓ Usar esta frecuencia</button></div>
       <details class="im-details">
         <summary>${detailSummary}</summary>
         <div class="im-details-content">${detailContent}</div>

@@ -352,3 +352,4 @@ body.field-open{overflow:hidden}
 }
 
 .wf-backup-cell{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:170px}.wf-backup-line{display:flex;align-items:baseline;gap:6px;min-width:118px}.backup-slot{font:700 10px var(--font-mono);color:var(--text-dim);letter-spacing:.04em}.backup-frequency{font:700 12px var(--font-mono);color:var(--text)}.backup-frequency small{font-size:9px;color:var(--text-dim);font-weight:500}.backup-empty{font:600 11px var(--font-mono);color:var(--text-dim)}.wf-backup-actions{display:flex;align-items:center;gap:6px}.wf-backup-actions .text-btn{padding:3px 0}.backup-activate-btn{font-size:10px;padding:4px 7px}
+\n.wf-backup-select{display:flex;align-items:center;gap:7px;flex-wrap:wrap;width:100%}.wf-backup-select select{flex:1;min-width:210px;max-width:460px;font-family:var(--font-mono);font-size:11px;padding:5px 8px}.wf-backup-select .backup-activate-btn{font-size:10px;padding:4px 7px}\n

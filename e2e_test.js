@@ -225,6 +225,7 @@ async function main() {
   check("frecuencia ocupada crea ficha automática",doc.getElementById("wfChannels").innerHTML.includes("590.100")&&doc.getElementById("wfChannels").innerHTML.includes("Deity THEOS DBTX"));
   check("backup vacío se muestra como — y no como 0.000",doc.getElementById("wfChannels").innerHTML.includes("BKP 1 —")&&!doc.getElementById("wfChannels").innerHTML.includes("BKP 1 0.000"));
   check("backup vacío no muestra botón Activar",!doc.querySelector(".backup-activate-btn"));
+  check("backup se elige desde un selector dentro de la ficha",!!doc.querySelector("#wfChannels .wf-backup-select select"));
   check("backup vacío muestra guion separado de la acción",doc.getElementById("wfChannels").innerHTML.includes("backup-empty"));
 
   doc.getElementById("loadExample").onclick();
