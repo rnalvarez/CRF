@@ -194,6 +194,20 @@
     el.hidden=false;el.innerHTML='<span>Backup '+(backupTarget.slot+1)+' para <strong>'+esc(a.channel)+'</strong> · '+fmt(a.frequency)+' MHz</span><button type="button" class="secondary" onclick="CRF_WORKFLOW.cancelBackup()">Cancelar</button>';
   }
 
+  function fieldBackupOptionHTML(a,slot){
+    const value=(a.backups||[])[slot],rows=getBackupRecommendations(a.deviceId).slice();
+    if(isBackupFrequency(value)&&!rows.some(r=>near(r.cand.freq,value)))
+      rows.unshift({cand:{freq:Number(value),label:"Backup guardado"},tier:"recomendado",tierLabel:"✓ GUARDADO",score:0});
+    const options=rows.map(r=>{
+      const scan=scanAssessment(r.cand.freq),scanText=scan.blocked?" · ⚠ SCAN":"";
+      return '<option value="'+fmt(r.cand.freq)+'"'+(isBackupFrequency(value)&&near(r.cand.freq,value)?" selected":"")+'>'+fmt(r.cand.freq)+' MHz · '+esc(r.tierLabel||r.cand.label)+scanText+'</option>';
+    }).join("");
+    const placeholder=isBackupFrequency(value)?"<option value=\"\">Cambiar backup…</option>":"<option value=\"\">Elegir backup…</option>";
+    return '<div class="field-backup-item"><div class="field-backup-select-wrap"><strong>BKP '+(slot+1)+'</strong><select class="backup-frequency-select field-backup-select" aria-label="Backup '+(slot+1)+' de '+esc(a.channel||"canal")+'" data-channel-id="'+esc(a.id)+'" data-slot="'+slot+'">'+placeholder+options+'</select></div>'+
+      (isBackupFrequency(value)?'<button type="button" class="field-activate-btn" data-channel-id="'+esc(a.id)+'" data-backup-slot="'+slot+'">Activar</button>':"")+
+      '</div>';
+  }
+
   function renderField(){
     const r=currentLocation();if(!r)return;
     q("fieldProjectName").textContent=W.project.name;
@@ -202,18 +216,20 @@
     b.innerHTML=(r.channels||[]).length?r.channels.map(a=>{
       const backups=(a.backups||[]).map((v,i)=>({v,isSet:isBackupFrequency(v),slot:i}));
       const configured=backups.filter(x=>x.isSet);
-      const backupSummary=configured.length?configured.map(x=>"BKP "+(x.slot+1)+" · "+fmt(x.v)).join(" · "):"Sin backup asignado";
-      const backupItems=configured.map(x=>{
-        const ev=evaluateFrequency(x.v,a.deviceId);
-        const status=ev.scan?.blocked?" · ⚠ SCAN":(ev.tier!=="recomendado"?" · "+ev.tierLabel:"");
-        return '<div class="field-backup-item"><div><strong>BKP '+(x.slot+1)+'</strong><span class="field-backup-frequency">'+fmt(x.v)+' MHz</span><span class="field-backup-status">'+esc(status)+'</span></div>'+
-          '<button type="button" class="field-activate-btn" data-channel-id="'+esc(a.id)+'" data-backup-slot="'+x.slot+'">Activar</button></div>';
-      }).join("");
+      const backupSummary=configured.length?configured.map(x=>"BKP "+(x.slot+1)+" · "+fmt(x.v)).join(" · "):"Elegir backup";
+      const rows=getBackupRecommendations(a.deviceId);
+      const hasCandidates=rows.length||configured.length;
       return '<details class="field-channel-details"><summary><div class="field-row"><div><div class="field-label">'+esc(a.channel)+'</div><div class="field-sub">'+esc(deviceName(a.deviceId))+(a.role?" · "+esc(a.role):"")+'</div></div><div class="field-freq">'+fmt(a.frequency)+' <span>MHz</span></div><div class="field-backups">'+esc(backupSummary)+'</div></div></summary>'+
         '<div class="field-channel-menu">'+
-        (configured.length?('<div class="field-menu-title">BACKUPS DISPONIBLES</div>'+backupItems):'<div class="field-menu-empty">No hay backups asignados a este canal.</div>')+
+        (hasCandidates?('<div class="field-menu-title">BACKUPS DISPONIBLES</div>'+fieldBackupOptionHTML(a,0)+fieldBackupOptionHTML(a,1)):'<div class="field-menu-empty">No se encontraron backups candidatos para este canal con la configuración actual.</div>')+
         '</div></details>';
     }).join(""):'<div class="field-empty">No hay canales identificados en esta locación.</div>';
+    b.querySelectorAll(".field-backup-select").forEach(sel=>{
+      sel.onchange=()=>{
+        if(sel.value==="")return;
+        selectBackup(sel.dataset.channelId,Number(sel.dataset.slot),sel.value);
+      };
+    });
     b.querySelectorAll(".field-activate-btn").forEach(btn=>{
       btn.onclick=()=>activateBackup(btn.dataset.channelId,Number(btn.dataset.backupSlot));
     });
