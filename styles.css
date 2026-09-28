@@ -317,3 +317,36 @@ body.field-open{overflow:hidden}
   .toast{bottom:16px;font-size:13px;padding:10px 16px;max-width:calc(100% - 32px);white-space:normal;text-align:center}
   h1{font-size:24px}
 }
+
+/* --- CRF workflow v3 compact overrides --- */
+.channels-details{margin-top:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--panel-2)}
+.channels-details>summary{cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 10px;color:var(--text);font:600 11px var(--font-mono);text-transform:uppercase;list-style:none}
+.channels-details>summary::-webkit-details-marker{display:none}
+.channels-details>summary:before{content:"▶";font-size:9px;color:var(--accent)}
+.channels-details[open]>summary:before{content:"▼"}
+.channel-count{font:600 10px var(--font-mono);color:var(--accent);padding:2px 6px;border:1px solid var(--border);border-radius:10px}
+.channel-summary-hint{margin-left:auto;color:var(--text-faint);font:400 10px var(--font-mono);text-transform:none;letter-spacing:0}
+.channels-details-body{padding:0 9px 9px;border-top:1px solid var(--border)}
+.wf-channels{display:grid;gap:6px;margin-top:7px}
+.wf-channel{padding:8px 9px}
+.wf-channel-device{font-size:10.5px}
+.wf-channel-freq{font-size:18px}
+.wf-channel-actions{grid-column:1/-1;display:flex;gap:6px;justify-content:flex-end}
+.backup-status.empty{color:var(--text-faint)}
+.backup-status.invalid{color:var(--advertencia)}
+.scan-availability{margin-top:8px}
+.scan-box-title{font:700 10px var(--font-mono);letter-spacing:.08em;color:var(--accent);margin-bottom:5px}
+.scan-box-stats{display:flex;gap:6px;flex-wrap:wrap}
+.scan-box-stats span{padding:4px 6px;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm);font:500 10px var(--font-mono);color:var(--text-dim)}
+.scan-box-stats b{color:var(--text)}
+.scan-box-info,.scan-box-note{color:var(--text-dim);font-size:10.5px}
+.scan-box-note{margin-top:5px}
+.scan-result-flag{margin:5px 0;padding:5px 7px;border:1px solid rgba(227,149,63,.35);border-radius:var(--radius-sm);color:var(--advertencia);font:600 10px var(--font-mono)}
+.result-actions{display:flex;gap:7px;flex-wrap:wrap}
+@media(max-width:760px){
+  .channels-details-body{padding:0 6px 6px}
+  .channel-summary-hint{display:none}
+  .wf-channel{grid-template-columns:1fr auto}
+  .wf-channel-freq{grid-column:2;grid-row:1}
+  .wf-channel-actions{grid-column:1/-1}
+}
