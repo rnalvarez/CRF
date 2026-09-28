@@ -10,6 +10,11 @@
   const clone=x=>JSON.parse(JSON.stringify(x));
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const today=()=>new Date().toISOString().slice(0,10);
+  const normalizeBackup=x=>{
+    if(x===null||x===undefined||x==="")return null;
+    const n=Number(x);
+    return Number.isFinite(n)?n:null;
+  };
 
   let W={version:2,project:{name:"Mi rodaje",production:"",date:today(),notes:""},selectedDeviceId:"",locations:[],activeLocationId:null};
   let backupTarget=null,editingId=null;
@@ -33,10 +38,15 @@
   function normalizeChannel(a){
     const frequency=Number(a.frequency);if(!Number.isFinite(frequency))return null;
     const dId=a.deviceId||"";
-    const backups=Array.isArray(a.backups)?a.backups.slice(0,2):[a.backup1??null,a.backup2??null];
+    let rawBackups=null;
+    if(Array.isArray(a.backups))rawBackups=a.backups;
+    else if(a.backups&&typeof a.backups==="object")rawBackups=[a.backups[0]??a.backups.bkp1??a.backups.backup1??null,a.backups[1]??a.backups.bkp2??a.backups.backup2??null];
+    else if(Array.isArray(a.backupFrequencies))rawBackups=a.backupFrequencies;
+    else rawBackups=[a.backup1??a.backup_1??null,a.backup2??a.backup_2??null];
+    const backups=[normalizeBackup(rawBackups[0]),normalizeBackup(rawBackups[1])];
     return {id:a.id||uid(),channel:a.channel||"CH 01",role:a.role||"",deviceId:dId,
       deviceName:a.deviceName||deviceName(dId),frequency,powerMw:Number.isFinite(Number(a.powerMw))&&Number(a.powerMw)>0?Number(a.powerMw):null,
-      digital:!!a.digital,backups:backups.map(x=>Number.isFinite(Number(x))?Number(x):null),notes:a.notes||""};
+      digital:!!a.digital,backups,notes:a.notes||""};
   }
 
   function normalizeLocation(r){
@@ -71,7 +81,12 @@
     r.occupied=clone(state.occupied||[]);
     r.scan=r.scan||{threshold:-55,guard:0.25,points:[]};const sg=Number(q("scanGuard")?.value),st=Number(q("scanThreshold")?.value);if(Number.isFinite(sg)&&sg>=0)r.scan.guard=sg;if(Number.isFinite(st))r.scan.threshold=st;
     r.channels=r.channels.filter(a=>r.occupied.some(o=>near(o.freq,a.frequency)));
-    for(const a of r.channels)a.deviceName=deviceName(a.deviceId);
+    for(const a of r.channels){
+      const b=Array.isArray(a.backups)?a.backups.slice(0,2):[null,null];
+      while(b.length<2)b.push(null);
+      a.backups=b.map(normalizeBackup);
+      a.deviceName=deviceName(a.deviceId);
+    }
     W.selectedDeviceId=q("deviceSelect")?.value||W.selectedDeviceId;
   }
 
@@ -119,10 +134,17 @@
     const cnt=q("wfChannelCount");if(cnt)cnt.textContent=String(channels.length);
     if(!channels.length&&!unassigned.length)box.innerHTML='<div class="wf-empty">Todavía no hay equipos/canales en uso.</div>';
     else{
-      box.innerHTML=channels.map(a=>{const active=backupTarget&&backupTarget.id===a.id;return '<article class="wf-channel'+(active?' is-backup-target':'')+'"><div class="wf-channel-main"><div class="wf-channel-name">'+esc(a.channel)+'<span>'+esc(a.role||"")+'</span></div><div class="wf-channel-device">'+esc(deviceName(a.deviceId))+(a.digital?" · digital":"")+(a.powerMw?(" · "+esc(a.powerMw)+" mW"):"")+'</div></div><div class="wf-channel-freq">'+fmt(a.frequency)+'<small>MHz</small></div><div class="wf-channel-backups"><button type="button" class="text-btn '+(active&&backupTarget.slot===0?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\',0)">'+backupStatus(a,0)+'</button><button type="button" class="text-btn '+(active&&backupTarget.slot===1?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\',1)">'+backupStatus(a,1)+'</button></div><div class="wf-channel-actions"><button type="button" class="secondary" onclick="CRF_WORKFLOW.openEdit(\''+esc(a.id)+'\')">Editar</button><button type="button" class="secondary" onclick="CRF_WORKFLOW.removeChannel(\''+esc(a.id)+'\')">Quitar</button></div>'+(a.notes?'<div class="wf-channel-notes">'+esc(a.notes)+'</div>':'')+'</article>'}).join("");
+      box.innerHTML=channels.map(a=>{const active=backupTarget&&backupTarget.id===a.id;return '<article class="wf-channel'+(active?' is-backup-target':'')+'"><div class="wf-channel-main"><div class="wf-channel-name">'+esc(a.channel)+'<span>'+esc(a.role||"")+'</span></div><div class="wf-channel-device">'+esc(deviceName(a.deviceId))+(a.digital?" · digital":"")+(a.powerMw?(" · "+esc(a.powerMw)+" mW"):"")+'</div></div><div class="wf-channel-freq">'+fmt(a.frequency)+'<small>MHz</small></div><div class="wf-channel-backups">'+renderBackupCell(a,0)+renderBackupCell(a,1)+'</div><div class="wf-channel-actions"><button type="button" class="secondary" onclick="CRF_WORKFLOW.openEdit(\''+esc(a.id)+'\')">Editar</button><button type="button" class="secondary" onclick="CRF_WORKFLOW.removeChannel(\''+esc(a.id)+'\')">Quitar</button></div>'+(a.notes?'<div class="wf-channel-notes">'+esc(a.notes)+'</div>':'')+'</article>'}).join("");
       if(unassigned.length)box.innerHTML+='<div class="wf-unassigned"><strong>Ocupadas sin ficha</strong><span>'+unassigned.map(o=>fmt(o.freq)+" MHz").join(" · ")+'</span><small>Las frecuencias detectadas por scan permanecen aquí sin convertirse en canales.</small></div>';
     }
     renderBackupHint();renderScanAvailability();
+  }
+  function renderBackupCell(a,slot){
+    const active=backupTarget&&backupTarget.id===a.id&&backupTarget.slot===slot;
+    const v=(a.backups||[])[slot];
+    return '<div class="wf-backup-cell"><button type="button" class="text-btn '+(active?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\\''+esc(a.id)+'\\','+slot+')">'+backupStatus(a,slot)+'</button>'+
+      (Number.isFinite(Number(v))?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\\''+esc(a.id)+'\\','+slot+')">Activar</button>':"")+
+      '</div>';
   }
   function renderBackupHint(){
     const el=q("wfBackupHint");if(!el)return;
@@ -224,6 +246,40 @@
     if(prev&&state.devices?.[prev]){q("deviceSelect").value=prev;W.selectedDeviceId=prev}
     capture();renderChannels();renderField();renderScanAvailability();schedule();if(typeof renderDeviceInfo==="function")renderDeviceInfo();if(typeof calculate==="function")calculate();
     toast("✓ "+fmt(freq)+" MHz guardada como Backup "+slot+" de "+esc(a.channel));
+  }
+
+  function activateBackup(id,slot){
+    const r=currentLocation(),a=r?.channels?.find(x=>x.id===id),v=Number(a?.backups?.[slot]);
+    if(!a||!Number.isFinite(v)){toast("No hay un backup válido para activar");return}
+    if(near(v,a.frequency)){toast("El backup no puede ser igual a la frecuencia principal");return}
+    const other=(state.occupied||[]).find(o=>near(o.freq,v)&&!near(o.freq,a.frequency));
+    if(other){toast(fmt(v)+" MHz ya está ocupada en esta locación");return}
+    const ev=evaluateFrequency(v,a.deviceId);
+    if(!ev.possible){toast(fmt(v)+" MHz ya no es una frecuencia válida para "+esc(deviceName(a.deviceId)));return}
+    if(ev.scan?.blocked){
+      const where=ev.scan.nearest?fmt(ev.scan.nearest.freq)+" MHz":"la zona detectada";
+      if(window.confirm&&!window.confirm(fmt(v)+" MHz está dentro de ±"+fmt(ev.scan.guard)+" MHz de una señal detectada en "+where+".\\n\\n¿Activar igualmente el backup?"))return
+    }
+    if(ev.tier!=="recomendado"){
+      const detail=ev.tierLabel+(ev.hits?.length?" · "+ev.hits.slice(0,2).map(h=>"IM"+h.order+" a "+fmt(h.dist)+" MHz").join(" · "):"");
+      if(window.confirm&&!window.confirm(fmt(v)+" MHz no queda RECOMENDADA para "+esc(deviceName(a.deviceId))+": "+detail+".\\n\\n¿Activar igualmente el backup?"))return
+    }
+    const primary=(state.occupied||[]).find(o=>near(o.freq,a.frequency));
+    if(!primary){toast("El canal principal ya no está presente en frecuencias ocupadas");return}
+    const oldFreq=a.frequency,oldBackup=v,source=primary.source||"manual";
+    a.frequency=oldBackup;
+    a.backups=a.backups||[null,null];
+    a.backups[slot]=oldFreq;
+    primary.freq=oldBackup;
+    primary.powerMw=a.powerMw;
+    primary.digital=a.digital;
+    primary.source=source;
+    state.occupied.sort((x,y)=>x.freq-y.freq);
+    backupTarget=null;
+    if(typeof renderOccupied==="function")renderOccupied();
+    if(typeof calculate==="function")calculate();
+    renderChannels();renderField();renderScanAvailability();schedule();
+    toast("✓ "+fmt(oldBackup)+" MHz activada como principal de "+esc(a.channel)+" · anterior "+fmt(oldFreq)+" MHz queda como Backup "+(slot+1));
   }
 
   function openEdit(id){
@@ -328,7 +384,7 @@
     window.addEventListener("beforeunload",()=>{try{persist()}catch(e){}});syncUI();setStatus("Guardado local");
   }
 
-  window.CRF_WORKFLOW={scanAssessment,evaluateFrequency,removeChannel,useFrequency:wrappedCandidate,useSet:wrappedSet,startBackup,cancelBackup,useAsBackup,hasBackupTarget,backupLabel,openEdit,openField:field,closeField,
+  window.CRF_WORKFLOW={scanAssessment,evaluateFrequency,removeChannel,useFrequency:wrappedCandidate,useSet:wrappedSet,startBackup,cancelBackup,useAsBackup,activateBackup,hasBackupTarget,backupLabel,openEdit,openField:field,closeField,
     save:()=>{capture();persist();toast("Proyecto RF guardado")},downloadProject:exportProject,rfSheet:sheet};
 
   (async()=>{for(let i=0;i<150;i++){if(Object.keys(state.devices||{}).length){bind();return}await new Promise(r=>setTimeout(r,20))}if(q("wfProjectName"))bind()})();
