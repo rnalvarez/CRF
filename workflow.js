@@ -75,8 +75,7 @@
     W.selectedDeviceId=q("deviceSelect")?.value||W.selectedDeviceId;
   }
 
-  function payload(){capture();return {version:2,savedAt:new Date().toISOString(),project:clone(W.project),
-    selectedDeviceId:W.selectedDeviceId,activeLocationId:W.activeLocationId,locations:clone(W.locations)}}
+  function payload(){capture();const analysis={coordinationProfile:q("coordinationProfile")?.value||"standard",minSeparation:Number(q("minSeparation")?.value),imThreshold:Number(q("imThreshold")?.value),resultCount:Number(q("resultCount")?.value),criticalFloor:Number(q("criticalFloor")?.value),strict:!!q("strict")?.checked};return {version:3,savedAt:new Date().toISOString(),project:clone(W.project),selectedDeviceId:W.selectedDeviceId,activeLocationId:W.activeLocationId,analysis,locations:clone(W.locations)}}
 
   function setStatus(text){if(q("wfSaveStatus"))q("wfSaveStatus").textContent=text;if(q("wfSaveStatusTop"))q("wfSaveStatusTop").textContent=text}
   function persist(){try{localStorage.setItem(STORE,JSON.stringify(payload()));setStatus("Guardado local")}catch(e){setStatus("No se pudo guardar")}}
@@ -87,18 +86,19 @@
   function renderProjectMeta(){const r=currentLocation();if(!r)return;q("wfProjectName").value=W.project.name;q("wfProduction").value=W.project.production;q("wfProjectDate").value=W.project.date;q("wfProjectNotes").value=W.project.notes;q("wfRegionName").value=r.name;q("wfRegionLocation").value=r.location;renderRegionSelect()}
 
   function scanAssessment(freq){
-    const r=currentLocation(),g=Math.max(0,Number(r?.scan?.guard)||0),pts=r?.scan?.points||[];let nearest=null;
+    const r=currentLocation(),g=Math.max(0,Number(r?.scan?.guard)||0),threshold=Number(r?.scan?.threshold);const pts=(r?.scan?.points||[]).filter(p=>!Number.isFinite(threshold)||p.level>=threshold);let nearest=null;
     for(const p of pts){const d=Math.abs(Number(freq)-p.freq);if(!nearest||d<nearest.distance)nearest={freq:p.freq,level:p.level,distance:d}}
     return {blocked:!!nearest&&nearest.distance<=g+1e-9,nearest,guard:g};
   }
   function renderScanAvailability(){
     const b=q("scanAvailability");if(!b)return;const r=currentLocation(),d=currentDevice();
-    if(!r||!d||!r.scan.points.length){b.innerHTML="";return}
+    const activePoints=(r?.scan?.points||[]).filter(p=>p.level>=Number(r?.scan?.threshold));
+    if(!r||!d||!activePoints.length){b.innerHTML="";return}
     if(d.candidateModel!=="channels"&&d.candidateModel!=="continuous"){b.innerHTML='<div class="scan-box-info">Hay señales cargadas. Elegí un dispositivo para calcular su disponibilidad.</div>';return}
     const min=Number(q("rangeMin").value),max=Number(q("rangeMax").value),cs=generateCandidates(d,min,max);let exact=0,blocked=0;
     cs.forEach(c=>{if((state.occupied||[]).some(o=>near(o.freq,c.freq))){exact++;return}if(scanAssessment(c.freq).blocked)blocked++});
     const free=Math.max(0,cs.length-exact-blocked);
-    b.innerHTML='<div class="scan-box-title">DISPONIBILIDAD SEGÚN SCAN</div><div class="scan-box-stats"><span><b>'+r.scan.points.length+'</b> señales</span><span><b>'+exact+'</b> ocupadas</span><span><b>'+blocked+'</b> afectadas por scan</span><span><b>'+free+'</b> libres del entorno</span></div><div class="scan-box-note">"Libre del scan" no significa libre de IM: las Recomendaciones siguen haciendo la coordinación RF.</div>';
+    b.innerHTML='<div class="scan-box-title">DISPONIBILIDAD SEGÚN SCAN</div><div class="scan-box-stats"><span><b>'+activePoints.length+'</b> señales</span><span><b>'+exact+'</b> ocupadas</span><span><b>'+blocked+'</b> afectadas por scan</span><span><b>'+free+'</b> libres del entorno</span></div><div class="scan-box-note">"Libre del scan" no significa libre de IM: las Recomendaciones siguen haciendo la coordinación RF.</div>';
   }
   function analysisOptions(){return {minSep:Number(q("minSeparation")?.value)||0,imThreshold:Number(q("imThreshold")?.value)||0,strict:!!q("strict")?.checked,criticalFloor:Number(q("criticalFloor")?.value)||0.010}}
   function evaluateFrequency(freq,deviceId){
@@ -141,8 +141,8 @@
     renderProjectMeta();
     if(W.selectedDeviceId&&state.devices[W.selectedDeviceId])q("deviceSelect").value=W.selectedDeviceId;
     if(typeof renderDeviceInfo==="function")renderDeviceInfo();
-    q("rangeMin").value=r.rangeMin;q("rangeMax").value=r.rangeMax;q("rangeMargin").value=r.rangeMargin;
-    renderRegionSelect();renderChannels();renderField();
+    q("rangeMin").value=r.rangeMin;q("rangeMax").value=r.rangeMax;q("rangeMargin").value=r.rangeMargin;q("scanGuard").value=r.scan.guard;q("scanThreshold").value=r.scan.threshold;
+    renderRegionSelect();renderChannels();renderField();renderScanAvailability();
   }
 
   function restoreLocation(){
@@ -293,9 +293,22 @@
     const defs=[["G4 01","sennheiser_ew100_g4_g",566.200,30],["G4 02","sennheiser_ew100_g4_g",574.200,30],["BOYA 01","boya_wm8_pro_k2",559.990,null],["BOYA 02","boya_wm8_pro_k2",584.180,null]];
     defs.forEach(d=>r.channels.push({id:uid(),channel:d[0],role:"",deviceId:d[1],deviceName:deviceName(d[1]),frequency:d[2],powerMw:d[3],digital:false,backups:[null,null],notes:"Ejemplo CRF"}));r.channels.sort((a,b)=>a.frequency-b.frequency);
   }
+  function refreshScanOccupancy(){
+    const r=currentLocation();if(!r)return;
+    state.occupied=state.occupied.filter(o=>o.source!=="scan");
+    const threshold=Number(r.scan.threshold);
+    const points=(r.scan.points||[]).filter(p=>Number.isFinite(p.level)&&p.level>=threshold);
+    for(const p of points){
+      if(!state.occupied.some(o=>near(o.freq,p.freq)))state.occupied.push({freq:p.freq,powerMw:null,digital:false,source:"scan"});
+    }
+    state.occupied.sort((a,b)=>a.freq-b.freq);
+    if(typeof renderOccupied==="function")renderOccupied();
+    if(typeof calculate==="function")calculate();
+  }
+
   function wrappedLoadExample(){coreLoadExample();const r=currentLocation();if(r){r.scan={threshold:-55,guard:0.25,points:[]};registerExampleChannels()}q("scanText").value="";q("scanStatus").textContent="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
   function wrappedClearAll(){coreClearAll();const r=currentLocation();if(r){r.channels=[];r.scan.points=[]}q("scanText").value="";q("scanStatus").textContent="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
-  function wrappedImportScan(){const txt=q("scanText").value,th=Number(q("scanThreshold").value),parsed=typeof parseScanText==="function"?parseScanText(txt):[],threshold=Number.isFinite(th)?th:-55;coreImportScan();const r=currentLocation();if(r)r.scan={threshold,guard:Math.max(0,Number(q("scanGuard").value)||0),points:parsed.filter(p=>p.level>=threshold)};capture();renderChannels();renderField();renderScanAvailability();schedule()}
+  function wrappedImportScan(){const txt=q("scanText").value,th=Number(q("scanThreshold").value),parsed=typeof parseScanText==="function"?parseScanText(txt):[],threshold=Number.isFinite(th)?th:-55;coreImportScan();const r=currentLocation();if(r)r.scan={threshold,guard:Math.max(0,Number(q("scanGuard").value)||0),points:parsed};capture();renderChannels();renderField();renderScanAvailability();schedule()}
 
   function bind(){
     loadSaved();try{const raw=localStorage.getItem(STORE)||localStorage.getItem(LEGACY_STORE)||localStorage.getItem(OLD_STORE);if(raw){const saved=JSON.parse(raw),a=saved.analysis||{};if(a.coordinationProfile)q("coordinationProfile").value=a.coordinationProfile;if(Number.isFinite(a.minSeparation))q("minSeparation").value=a.minSeparation;if(Number.isFinite(a.imThreshold))q("imThreshold").value=a.imThreshold;if(Number.isFinite(a.resultCount))q("resultCount").value=a.resultCount;if(Number.isFinite(a.criticalFloor))q("criticalFloor").value=a.criticalFloor;if(typeof a.strict==="boolean")q("strict").checked=a.strict}}catch(e){}if(W.selectedDeviceId&&state.devices[W.selectedDeviceId])q("deviceSelect").value=W.selectedDeviceId;
@@ -307,7 +320,7 @@
     ["wfRegionName","wfRegionLocation"].forEach(id=>q(id).addEventListener("input",()=>{const r=currentLocation();r.name=q("wfRegionName").value.trim()||"Locación";r.location=q("wfRegionLocation").value.trim();renderRegionSelect();renderField();schedule()}));
     q("deviceSelect").addEventListener("change",()=>{W.selectedDeviceId=q("deviceSelect").value;if(typeof renderDeviceInfo==="function")renderDeviceInfo();if(typeof calculate==="function")calculate();renderChannels();schedule()});
     ["rangeMin","rangeMax","rangeMargin"].forEach(id=>q(id).addEventListener("change",()=>{const r=currentLocation();if(!r)return;r.rangeMin=Number(q("rangeMin").value)||r.rangeMin;r.rangeMax=Number(q("rangeMax").value)||r.rangeMax;r.rangeMargin=Number.isFinite(Number(q("rangeMargin").value))?Number(q("rangeMargin").value):r.rangeMargin;if(typeof calculate==="function")calculate();renderChannels();renderScanAvailability();schedule()}));
-    ["scanGuard","scanThreshold","coordinationProfile","minSeparation","imThreshold","resultCount","criticalFloor","strict"].forEach(id=>q(id)?.addEventListener("change",()=>{const r=currentLocation();if(r&&id==="scanGuard")r.scan.guard=Math.max(0,Number(q("scanGuard").value)||0);if(r&&id==="scanThreshold")r.scan.threshold=Number.isFinite(Number(q("scanThreshold").value))?Number(q("scanThreshold").value):-55;if(typeof calculate==="function")calculate();renderChannels();renderField();renderScanAvailability();schedule()}));
+    ["scanGuard","scanThreshold","coordinationProfile","minSeparation","imThreshold","resultCount","criticalFloor","strict"].forEach(id=>q(id)?.addEventListener("change",()=>{const r=currentLocation();if(r&&id==="scanGuard")r.scan.guard=Math.max(0,Number(q("scanGuard").value)||0);if(r&&id==="scanThreshold"){r.scan.threshold=Number.isFinite(Number(q("scanThreshold").value))?Number(q("scanThreshold").value):-55;refreshScanOccupancy()}if(typeof calculate==="function")calculate();renderChannels();renderField();renderScanAvailability();schedule()}));
     
     
     
