@@ -59,6 +59,19 @@ h1{margin:10px 0 8px;font:700 28px/1.15 var(--font-display);letter-spacing:.01em
 .ch-tag{display:block;font:600 10.5px/1 var(--font-mono);letter-spacing:.14em;color:var(--text-faint);text-transform:uppercase;margin-bottom:7px}
 h2{font:700 15px/1.3 var(--font-display);letter-spacing:.03em;text-transform:uppercase;margin:0 0 14px;color:var(--text)}
 
+.analysis-params{margin:0}
+.analysis-params>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;margin:0;color:var(--text)}
+.analysis-params>summary::-webkit-details-marker{display:none}
+.analysis-params>summary .ch-tag{margin:0;flex:0 0 auto}
+.analysis-params-title{font:700 15px/1.3 var(--font-display);letter-spacing:.03em;text-transform:uppercase}
+.analysis-params-hint{margin-left:auto;color:var(--text-dim);font:500 11px var(--font-mono);letter-spacing:.03em}
+.analysis-params>summary:after{content:"▶";font:700 10px var(--font-mono);color:var(--text-dim);order:4}
+.analysis-params[open]>summary:after{content:"▼"}
+.analysis-params>summary:hover .analysis-params-title,.analysis-params>summary:hover .analysis-params-hint{color:var(--text)}
+.analysis-params[open]>summary{margin-bottom:16px}
+@media (max-width:700px){.analysis-params-hint{font-size:10px}.analysis-params>summary{align-items:flex-start}.analysis-params-title{flex:1}}
+
+
 /* --- Formularios --- */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 label{display:block;font-weight:600;font-size:13.5px;color:var(--text-dim)}
