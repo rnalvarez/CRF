@@ -262,6 +262,23 @@ async function main() {
     }
   }
 
+  window.CRF_WORKFLOW.openField();
+  check("FIELD MODE muestra un menú desplegable por canal",doc.querySelectorAll("#fieldAssignments .field-channel-details").length===4);
+  const fieldDetail=doc.querySelector("#fieldAssignments .field-channel-details");
+  check("el menú del canal contiene backups disponibles",!!fieldDetail&&!!fieldDetail.querySelector(".field-backup-item"));
+  if(fieldDetail){
+    const fieldBackup=fieldDetail.querySelector(".field-backup-frequency");
+    const fieldActivate=fieldDetail.querySelector(".field-activate-btn");
+    const fieldBackupFreq=fieldBackup?parseFloat(fieldBackup.textContent):NaN;
+    check("FIELD MODE muestra la frecuencia backup guardada",Number.isFinite(fieldBackupFreq));
+    if(fieldActivate&&Number.isFinite(fieldBackupFreq)){
+      window.confirm=()=>true;
+      fieldActivate.onclick();
+      check("FIELD MODE permite activar el backup",doc.querySelector("#fieldAssignments .field-channel-details")?.querySelector(".field-freq")?.textContent.includes(fieldBackupFreq.toFixed(3)));
+    }
+  }
+  window.CRF_WORKFLOW.closeField();
+
   doc.getElementById("deviceSelect").value="sennheiser_ew100_g4_g";
   doc.getElementById("deviceSelect").dispatchEvent(new window.Event("change"));
   doc.getElementById("rangeMin").value="566";
