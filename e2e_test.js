@@ -266,7 +266,7 @@ async function main() {
   check("FIELD MODE muestra un menú desplegable por canal",doc.querySelectorAll("#fieldAssignments .field-channel-details").length===4);
   let fieldDetail=doc.querySelector("#fieldAssignments .field-channel-details");
   let fieldSelect=fieldDetail?.querySelector(".field-backup-select");
-  check("FIELD MODE calcula backups posibles aunque no estén guardados",!!fieldSelect&&fieldSelect.options.length>1);
+  check("FIELD MODE ofrece una única selección BACKUP con todas las opciones",!!fieldSelect&&fieldSelect.options.length>1&&fieldSelect.getAttribute("aria-label")==="Backup de CH 01");
   if(fieldSelect&&fieldSelect.options.length>1){
     const selectedFieldBackup=parseFloat(fieldSelect.options[1].value);
     window.confirm=()=>true;
@@ -277,8 +277,8 @@ async function main() {
       Number.isFinite(selectedFieldBackup)&&
       !!fieldDetail&&
       fieldDetail.querySelector(".field-freq")?.textContent.includes(selectedFieldBackup.toFixed(3)));
-    check("FIELD MODE mantiene la frecuencia principal anterior como backup",
-      !!fieldDetail&&fieldDetail.innerHTML.includes("BKP"));
+    check("FIELD MODE mantiene la frecuencia principal anterior como único backup",
+      !!fieldDetail&&fieldDetail.querySelector(".field-backups")?.textContent.includes("BACKUP"));
   }
   window.CRF_WORKFLOW.closeField();
 
