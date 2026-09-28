@@ -350,3 +350,5 @@ body.field-open{overflow:hidden}
   .wf-channel-freq{grid-column:2;grid-row:1}
   .wf-channel-actions{grid-column:1/-1}
 }
+
+.wf-backup-cell{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:170px}.wf-backup-line{display:flex;align-items:baseline;gap:6px;min-width:118px}.backup-slot{font:700 10px var(--font-mono);color:var(--text-dim);letter-spacing:.04em}.backup-frequency{font:700 12px var(--font-mono);color:var(--text)}.backup-frequency small{font-size:9px;color:var(--text-dim);font-weight:500}.backup-empty{font:600 11px var(--font-mono);color:var(--text-dim)}.wf-backup-actions{display:flex;align-items:center;gap:6px}.wf-backup-actions .text-btn{padding:3px 0}.backup-activate-btn{font-size:10px;padding:4px 7px}

@@ -143,9 +143,13 @@
   function renderBackupCell(a,slot){
     const active=backupTarget&&backupTarget.id===a.id&&backupTarget.slot===slot;
     const v=(a.backups||[])[slot];
-    return '<div class="wf-backup-cell"><button type="button" class="text-btn '+(active?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\','+slot+')">'+backupStatus(a,slot)+'</button>'+
-      (isBackupFrequency(v)?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\''+esc(a.id)+'\','+slot+')">Activar</button>':"")+
-      '</div>';
+    const saved=isBackupFrequency(v);
+    const valueHtml=saved?'<span class="backup-frequency">'+fmt(v)+' <small>MHz</small></span>':'<span class="backup-empty">—</span>';
+    const actionLabel=saved?"Cambiar":"Elegir";
+    return '<div class="wf-backup-cell"><div class="wf-backup-line"><span class="backup-slot">BKP '+(slot+1)+'</span>'+valueHtml+'</div>'+
+      '<div class="wf-backup-actions"><button type="button" class="text-btn '+(active?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\','+slot+')">'+actionLabel+'</button>'+
+      (saved?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\''+esc(a.id)+'\','+slot+')">Activar</button>':"")+
+      '</div></div>';
   }
   function renderBackupHint(){
     const el=q("wfBackupHint");if(!el)return;
@@ -315,7 +319,7 @@
   function sheet(){
     const p=payload(),r=currentLocation(),win=window.open("","_blank");
     if(!win){toast("El navegador bloqueó la Hoja RF");return}
-    const rows=(r.channels||[]).map(a=>'<tr><td>'+esc(a.channel)+'</td><td>'+esc(a.role||"")+'</td><td>'+esc(deviceName(a.deviceId))+'</td><td class="m">'+fmt(a.frequency)+'</td><td class="m">'+(a.backups?.[0]!==null&&a.backups?.[0]!==undefined?fmt(a.backups[0]):"—")+'</td><td class="m">'+(a.backups?.[1]!==null&&a.backups?.[1]!==undefined?fmt(a.backups[1]):"—")+'</td><td>'+(a.powerMw?a.powerMw+" mW":"—")+'</td></tr>').join("");
+    const rows=(r.channels||[]).map(a=>'<tr><td>'+esc(a.channel)+'</td><td>'+esc(a.role||"")+'</td><td>'+esc(deviceName(a.deviceId))+'</td><td class="m">'+fmt(a.frequency)+' MHz</td><td class="m">'+(isBackupFrequency(a.backups?.[0])?fmt(a.backups[0])+" MHz":"—")+'</td><td class="m">'+(isBackupFrequency(a.backups?.[1])?fmt(a.backups[1])+" MHz":"—")+'</td><td>'+(a.powerMw?a.powerMw+" mW":"—")+'</td></tr>').join("");
     const raw=(r.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));
     const rawHtml=raw.length?'<h2>Frecuencias ocupadas sin ficha</h2><p>'+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")+'</p>':"";
     win.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>CRF · Hoja RF</title><style>body{font:14px Arial,sans-serif;color:#111;padding:28px}h1{margin:0 0 5px}p{margin:4px 0 16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:7px;text-align:left}th{background:#eee}.m{font:14px monospace}.note{margin-top:18px;padding:10px;background:#f1f1f1}</style></head><body><h1>CRF · Hoja RF</h1><p><strong>'+esc(p.project.name)+'</strong> · '+esc(r.name)+(r.location?" · "+esc(r.location):"")+' · '+esc(p.project.date)+'</p><table><thead><tr><th>Canal</th><th>Función</th><th>Dispositivo</th><th>Principal</th><th>Backup 1</th><th>Backup 2</th><th>Potencia</th></tr></thead><tbody>'+
