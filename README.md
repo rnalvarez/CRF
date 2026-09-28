@@ -2,6 +2,14 @@
 
 Web app estática (sin backend, pensada para GitHub Pages) para coordinar frecuencias de sistemas de audio inalámbrico UHF — micrófonos, IFB — en producciones de cine y video. Dado el rango de trabajo, el equipo y las frecuencias ya ocupadas, CRF evalúa separación e intermodulación, calcula y ordena candidatas y permite llevar la coordinación como proyecto de rodaje.
 
+## Licencia y autoría
+
+CRF — Coordinador de Frecuencias UHF fue concebido, diseñado, desarrollado y validado por **Ramiro N. Alvarez**, con asistencia de herramientas de inteligencia artificial durante el proceso de desarrollo.
+
+La arquitectura, los objetivos funcionales, los criterios de coordinación, las decisiones de diseño, las pruebas y la validación del comportamiento de la herramienta fueron definidos y supervisados por su autor.
+
+El proyecto se distribuye bajo la **Apache License 2.0**. La licencia permite usar, modificar y redistribuir el proyecto de acuerdo con sus términos. Al redistribuir CRF o trabajos derivados deben conservarse los avisos de licencia, copyright y atribución correspondientes, incluyendo los indicados en el archivo `NOTICE`.
+
 ## Qué problema resuelve
 
 Coordinar múltiples receptores UHF a mano es propenso a error: hay que dejar separación suficiente entre transmisores, y además evitar que sus productos de intermodulación (IM) —"fantasmas" matemáticos que aparecen cuando dos o más transmisores se mezclan de forma no lineal— caigan sobre otro receptor en uso. CRF automatiza ese análisis y explica *por qué* descarta o penaliza cada candidato.
