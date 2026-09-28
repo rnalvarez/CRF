@@ -1,3 +1,10 @@
+/* CRF — render de recomendaciones
+ * Copyright 2026 Ramiro N. Alvarez
+ * Licensed under the Apache License, Version 2.0.
+ * See LICENSE and NOTICE in the repository root.
+ *
+ * Developed with assistance from AI development tools.
+ */
 function renderCandidateResult(r, i) {
   const relevantHits = r.hits
     .filter(h => h.tier !== "recomendado")
