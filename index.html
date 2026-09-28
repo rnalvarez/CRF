@@ -95,7 +95,7 @@
     <p class="hint">Es el rango que querés que utilice el algoritmo. No evalúa legalidad/regulación.</p>
   </section>
 <section class="card">
-    <h2><span class="ch-tag">CH.03</span>Dispositivo que querés agregar</h2>
+    <h2><span class="ch-tag">CH.02</span>Dispositivo que querés agregar</h2>
     <label>Perfil
       <select id="deviceSelect"></select>
     </label><p class="hint">Este es el equipo que CRF coordina ahora. Al usar una frecuencia, queda asociada automáticamente a este dispositivo.</p>
@@ -113,14 +113,14 @@
     </div>
   </section>
 <section class="card">
-    <h2><span class="ch-tag">CH.02</span>Frecuencias ocupadas / equipos en uso</h2>
+    <h2><span class="ch-tag">CH.03</span>Frecuencias ocupadas / equipos en uso</h2>
     <div class="row">
       <input id="occupiedFreq" type="number" step="0.001" placeholder="Ej. 566.200">
       <input id="occupiedPower" type="number" step="1" min="0" placeholder="mW (opc.)" class="power-input">
       <label class="check inline"><input id="occupiedDigital" type="checkbox"> digital</label>
       <button id="addFreq">Agregar</button>
     </div>
-    <p class="hint">Las frecuencias agregadas manualmente quedan vinculadas automáticamente al dispositivo seleccionado en CH.03. Las detectadas por scan permanecen como ocupadas externas.</p><div class="workflow-channel-head"><div><strong>Canales en uso</strong><span class="hint">La ficha se genera desde las frecuencias ocupadas; no hay un formulario paralelo.</span></div><span id="wfSaveStatus" class="project-status">Guardado local</span></div><div id="wfBackupHint" class="backup-hint" hidden></div><div id="wfChannels" class="wf-channels"></div><p class="hint">Potencia y "digital" son opcionales: si los cargás, el motor pondera separación e IM según la potencia real y descuenta parte de la penalización IM cuando todo lo que contribuye a un producto es digital de espectro angosto.</p>
+    <p class="hint">Las frecuencias agregadas manualmente quedan vinculadas automáticamente al dispositivo seleccionado en CH.02. Las detectadas por scan permanecen como ocupadas externas.</p><div class="workflow-channel-head"><div><strong>Canales en uso</strong><span class="hint">La ficha se genera desde las frecuencias ocupadas; no hay un formulario paralelo.</span></div><span id="wfSaveStatus" class="project-status">Guardado local</span></div><div id="wfBackupHint" class="backup-hint" hidden></div><div id="wfChannels" class="wf-channels"></div><p class="hint">Potencia y "digital" son opcionales: si los cargás, el motor pondera separación e IM según la potencia real y descuenta parte de la penalización IM cuando todo lo que contribuye a un producto es digital de espectro angosto.</p>
     <div id="occupiedList" class="chips"></div>
     <div id="selfConflicts" class="self-conflicts"></div>
     <div class="preset">
