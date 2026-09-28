@@ -195,10 +195,32 @@
   }
 
   function renderField(){
-    const r=currentLocation();if(!r)return;q("fieldProjectName").textContent=W.project.name;q("fieldRegionName").textContent=r.name+(r.location?" · "+r.location:"");const b=q("fieldAssignments");
-    b.innerHTML=(r.channels||[]).length?r.channels.map(a=>{const bx=(a.backups||[]).filter(isBackupFrequency);return '<article class="field-row"><div><div class="field-label">'+esc(a.channel)+'</div><div class="field-sub">'+esc(deviceName(a.deviceId))+(a.role?" · "+esc(a.role):"")+'</div></div><div class="field-freq">'+fmt(a.frequency)+' <span>MHz</span></div><div class="field-backups">'+(bx.length?bx.map((v,i)=>{const ev=evaluateFrequency(v,a.deviceId);return "BKP "+(i+1)+" · "+fmt(v)+(ev.scan?.blocked?" ⚠ SCAN":"")+(ev.tier!=="recomendado"?" · "+ev.tierLabel:"")}).join(" · "):"Sin backup asignado")+'</div></article>'}).join(""):'<div class="field-empty">No hay canales identificados en esta locación.</div>';
-    const raw=(state.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));q("fieldUnassigned").textContent=raw.length?("Frecuencias ocupadas sin ficha: "+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")):"";
+    const r=currentLocation();if(!r)return;
+    q("fieldProjectName").textContent=W.project.name;
+    q("fieldRegionName").textContent=r.name+(r.location?" · "+r.location:"");
+    const b=q("fieldAssignments");
+    b.innerHTML=(r.channels||[]).length?r.channels.map(a=>{
+      const backups=(a.backups||[]).map((v,i)=>({v,isSet:isBackupFrequency(v),slot:i}));
+      const configured=backups.filter(x=>x.isSet);
+      const backupSummary=configured.length?configured.map(x=>"BKP "+(x.slot+1)+" · "+fmt(x.v)).join(" · "):"Sin backup asignado";
+      const backupItems=configured.map(x=>{
+        const ev=evaluateFrequency(x.v,a.deviceId);
+        const status=ev.scan?.blocked?" · ⚠ SCAN":(ev.tier!=="recomendado"?" · "+ev.tierLabel:"");
+        return '<div class="field-backup-item"><div><strong>BKP '+(x.slot+1)+'</strong><span class="field-backup-frequency">'+fmt(x.v)+' MHz</span><span class="field-backup-status">'+esc(status)+'</span></div>'+
+          '<button type="button" class="field-activate-btn" data-channel-id="'+esc(a.id)+'" data-backup-slot="'+x.slot+'">Activar</button></div>';
+      }).join("");
+      return '<details class="field-channel-details"><summary><div class="field-row"><div><div class="field-label">'+esc(a.channel)+'</div><div class="field-sub">'+esc(deviceName(a.deviceId))+(a.role?" · "+esc(a.role):"")+'</div></div><div class="field-freq">'+fmt(a.frequency)+' <span>MHz</span></div><div class="field-backups">'+esc(backupSummary)+'</div></div></summary>'+
+        '<div class="field-channel-menu">'+
+        (configured.length?('<div class="field-menu-title">BACKUPS DISPONIBLES</div>'+backupItems):'<div class="field-menu-empty">No hay backups asignados a este canal.</div>')+
+        '</div></details>';
+    }).join(""):'<div class="field-empty">No hay canales identificados en esta locación.</div>';
+    b.querySelectorAll(".field-activate-btn").forEach(btn=>{
+      btn.onclick=()=>activateBackup(btn.dataset.channelId,Number(btn.dataset.backupSlot));
+    });
+    const raw=(state.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));
+    q("fieldUnassigned").textContent=raw.length?("Frecuencias ocupadas sin ficha: "+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")):"";
   }
+
   function syncUI(){
     const r=currentLocation();if(!r)return;
     renderProjectMeta();
