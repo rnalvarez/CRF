@@ -52,7 +52,7 @@
     return '<div class="wf-backup-select"><span class="wf-backup-label">BACKUP</span><select class="backup-frequency-select" aria-label="Backup de '+esc(a.channel||"canal")+'" data-channel-id="'+esc(a.id)+'" data-slot="0">'+placeholder+options+'</select></div>';
   }
 
-  let W={version:2,project:{name:"Mi rodaje",production:"",date:today(),notes:""},selectedDeviceId:"",locations:[],activeLocationId:null};
+  let W={version:2,project:{name:"Mi rodaje",production:"",date:today(),notes:""},selectedDeviceId:"",customDevice:null,locations:[],activeLocationId:null};
   let backupTarget=null,editingId=null;
   let coreAddOccupied=null,coreAddCandidate=null,coreAddSet=null,coreRemoveFreq=null;
 
@@ -99,10 +99,34 @@
     const project=p?.project||{};
     W.project={name:project.name||"Mi rodaje",production:project.production||"",date:project.date||today(),notes:project.notes||""};
     W.selectedDeviceId=p?.selectedDeviceId||p?.selectedDevice||"";
+    const cd=p?.customDevice||p?.custom||null;
+    W.customDevice=cd&&typeof cd==="object"?{name:String(cd.name||"Dispositivo personalizado"),step:Number(cd.step),min:Number(cd.min),max:Number(cd.max)}:null;
     W.locations=(Array.isArray(p?.locations)?p.locations:(Array.isArray(p?.regions)?p.regions:[])).map(normalizeLocation);
     if(!W.locations.length)W.locations=[freshLocation("Locación 01")];
     W.activeLocationId=p?.activeLocationId||p?.activeRegionId;
     if(!W.locations.some(x=>x.id===W.activeLocationId))W.activeLocationId=W.locations[0].id;
+  }
+
+  function captureCustomDevice(){
+    if(typeof syncCustomDevice==="function"&&q("customMin"))syncCustomDevice();
+    const d=state.devices?.custom;
+    if(!d)return W.customDevice||null;
+    const step=Number(d.step),min=Number(d.min),max=Number(d.max);
+    return {
+      name:d.name||"Dispositivo personalizado",
+      step:Number.isFinite(step)?step:null,
+      min:Number.isFinite(min)?min:null,
+      max:Number.isFinite(max)?max:null
+    };
+  }
+  function restoreCustomDevice(){
+    const d=state.devices?.custom,c=W.customDevice;
+    if(!d||!c)return;
+    if(q("customName"))q("customName").value=c.name||"Dispositivo personalizado";
+    if(q("customStep"))q("customStep").value=Number.isFinite(c.step)?c.step:"";
+    if(q("customMin"))q("customMin").value=Number.isFinite(c.min)?c.min:"";
+    if(q("customMax"))q("customMax").value=Number.isFinite(c.max)?c.max:"";
+    if(typeof syncCustomDevice==="function")syncCustomDevice();
   }
 
   function capture(){
@@ -126,7 +150,7 @@
     W.selectedDeviceId=q("deviceSelect")?.value||W.selectedDeviceId;
   }
 
-  function payload(){capture();const analysis={coordinationProfile:q("coordinationProfile")?.value||"standard",minSeparation:Number(q("minSeparation")?.value),imThreshold:Number(q("imThreshold")?.value),resultCount:Number(q("resultCount")?.value),criticalFloor:Number(q("criticalFloor")?.value),strict:!!q("strict")?.checked};return {version:3,savedAt:new Date().toISOString(),project:clone(W.project),selectedDeviceId:W.selectedDeviceId,activeLocationId:W.activeLocationId,analysis,locations:clone(W.locations)}}
+  function payload(){capture();W.customDevice=clone(captureCustomDevice());const analysis={coordinationProfile:q("coordinationProfile")?.value||"standard",minSeparation:Number(q("minSeparation")?.value),imThreshold:Number(q("imThreshold")?.value),resultCount:Number(q("resultCount")?.value),criticalFloor:Number(q("criticalFloor")?.value),strict:!!q("strict")?.checked};return {version:3,savedAt:new Date().toISOString(),project:clone(W.project),selectedDeviceId:W.selectedDeviceId,customDevice:clone(W.customDevice),activeLocationId:W.activeLocationId,analysis,locations:clone(W.locations)}}
 
   function setStatus(text){if(q("wfSaveStatus"))q("wfSaveStatus").textContent=text;if(q("wfSaveStatusTop"))q("wfSaveStatusTop").textContent=text}
   function persist(){try{localStorage.setItem(STORE,JSON.stringify(payload()));setStatus("Guardado local")}catch(e){setStatus("No se pudo guardar")}}
@@ -471,6 +495,8 @@
 
   function bind(){
     loadSaved();try{const raw=localStorage.getItem(STORE)||localStorage.getItem(LEGACY_STORE)||localStorage.getItem(OLD_STORE);if(raw){const saved=JSON.parse(raw),a=saved.analysis||{};if(a.coordinationProfile)q("coordinationProfile").value=a.coordinationProfile;if(Number.isFinite(a.minSeparation))q("minSeparation").value=a.minSeparation;if(Number.isFinite(a.imThreshold))q("imThreshold").value=a.imThreshold;if(Number.isFinite(a.resultCount))q("resultCount").value=(a.resultCount===20?10:a.resultCount);if(Number.isFinite(a.criticalFloor))q("criticalFloor").value=a.criticalFloor;if(typeof a.strict==="boolean")q("strict").checked=a.strict}}catch(e){}if(W.selectedDeviceId&&state.devices[W.selectedDeviceId])q("deviceSelect").value=W.selectedDeviceId;
+    restoreCustomDevice();
+    ["customName","customStep","customMin","customMax"].forEach(id=>q(id)?.addEventListener("input",()=>{W.customDevice=captureCustomDevice();schedule()}));
     restoreLocation();wrapCore();
     q("wfSave").onclick=()=>{capture();persist();toast("Proyecto RF guardado")};q("wfExport").onclick=exportProject;q("wfImport").onclick=()=>q("wfFile").click();
     q("wfFile").onchange=e=>e.target.files[0]&&importProject(e.target.files[0]);q("wfSheet").onclick=sheet;q("wfFieldMode").onclick=field;q("fieldClose").onclick=closeField;q("fieldSheet").onclick=sheet;
