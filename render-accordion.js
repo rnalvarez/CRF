@@ -53,7 +53,16 @@ function renderCandidateResult(r, i) {
 }
 
 function renderCandidateResults(results) {
-  return results.length
-    ? results.map(renderCandidateResult).join("")
-    : "<p class='bad-text'>No hay candidatos dentro del rango y las capacidades del dispositivo.</p>";
+  if(!results.length) return "<p class='bad-text'>No hay candidatos dentro del rango y las capacidades del dispositivo.</p>";
+  const visible=results.slice(0,2);
+  const extra=results.slice(2);
+  let html=visible.map(renderCandidateResult).join("");
+  if(extra.length){
+    html+=
+      '<details class="recommendations-more">'+
+        '<summary><strong>Ver '+extra.length+' recomendaciones más</strong><span>'+results.length+' calculadas · mostrar las '+extra.length+' restantes</span></summary>'+
+        '<div class="recommendations-more-list">'+extra.map(renderCandidateResult).join("")+'</div>'+
+      '</details>';
+  }
+  return html;
 }
