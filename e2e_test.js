@@ -42,6 +42,24 @@ async function main() {
   check("FIELD MODE está disponible", !!doc.getElementById("wfFieldMode") && !!doc.getElementById("fieldMode"));
   check("proyecto inicial tiene una locación", doc.getElementById("wfRegionSelect").options.length === 1);
 
+  // Persistencia del dispositivo personalizado.
+  doc.getElementById("deviceSelect").value="custom";
+  doc.getElementById("deviceSelect").dispatchEvent(new window.Event("change"));
+  doc.getElementById("customName").value="Mi lav UHF";
+  doc.getElementById("customStep").value="0.025";
+  doc.getElementById("customMin").value="470";
+  doc.getElementById("customMax").value="608";
+  ["customName","customStep","customMin","customMax"].forEach(id=>doc.getElementById(id).dispatchEvent(new window.Event("input")));
+  w.CRF_WORKFLOW.save();
+  const savedProject=JSON.parse(window.localStorage.getItem("crf.rfProject.v3"));
+  check("el dispositivo personalizado se guarda dentro del proyecto",
+    savedProject.customDevice?.name==="Mi lav UHF" &&
+    savedProject.customDevice?.step===0.025 &&
+    savedProject.customDevice?.min===470 &&
+    savedProject.customDevice?.max===608);
+  doc.getElementById("deviceSelect").value="deity_theos";
+  doc.getElementById("deviceSelect").dispatchEvent(new window.Event("change"));
+
   // Cargar ejemplo (2 G4 + 2 BOYA) y calcular
   doc.getElementById("loadExample").onclick();
   check("cargar ejemplo pobló 4 chips", doc.getElementById("occupiedList").querySelectorAll(".chip").length === 4);
@@ -54,6 +72,11 @@ async function main() {
   // La lista de IM de cada card de resultado debe venir en un <details> desplegable,
   // no como tabla siempre visible (ver render-accordion.js).
   const resultCards = [...doc.getElementById("results").querySelectorAll(".result")];
+  check("se calculan 10 recomendaciones", resultCards.length === 10);
+  check("solo 2 recomendaciones quedan visibles inicialmente", doc.getElementById("results").querySelectorAll(":scope > .result").length === 2);
+  check("las 8 recomendaciones restantes están dentro de un desplegable", doc.getElementById("results").querySelectorAll(":scope > .recommendations-more .result").length === 8);
+  const moreSummary=doc.querySelector("#results > .recommendations-more > summary")?.textContent||"";
+  check("el desplegable explica claramente que hay 8 más y 10 calculadas", moreSummary.includes("Ver 8 recomendaciones más")&&moreSummary.includes("10 calculadas"));
   check("todas las cards de resultado tienen su detalle IM en un <details>", resultCards.every(c => c.querySelector(":scope > details.im-details")));
   check("ninguna card dejó la tabla de IM suelta fuera del <details>", resultCards.every(c => !c.querySelector(":scope > table.im-table")));
   const summaries = resultCards.map(c => c.querySelector("summary")?.textContent || "");
