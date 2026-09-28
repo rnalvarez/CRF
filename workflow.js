@@ -169,6 +169,7 @@
     r.channels.push(a);r.channels.sort((x,y)=>x.frequency-y.frequency);return a;
   }
 
+  function invalidateSetResults(){const el=q("setResults");if(el)el.innerHTML="";}
   function wrappedAddOccupied(){
     const freq=Number(q("occupiedFreq").value),pw=Number(q("occupiedPower").value),dig=!!q("occupiedDigital").checked,before=state.occupied.length;
     coreAddOccupied();
@@ -306,9 +307,9 @@
     if(typeof calculate==="function")calculate();
   }
 
-  function wrappedLoadExample(){coreLoadExample();const r=currentLocation();if(r){r.scan={threshold:-55,guard:0.25,points:[]};registerExampleChannels()}q("scanText").value="";q("scanStatus").textContent="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
-  function wrappedClearAll(){coreClearAll();const r=currentLocation();if(r){r.channels=[];r.scan.points=[];r.scan.threshold=-55;r.scan.guard=0.25}q("scanText").value="";q("scanStatus").textContent="";q("setResults").innerHTML="";q("scanAvailability").innerHTML="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
-  function wrappedImportScan(){const txt=q("scanText").value,th=Number(q("scanThreshold").value),parsed=typeof parseScanText==="function"?parseScanText(txt):[],threshold=Number.isFinite(th)?th:-55;coreImportScan();const r=currentLocation();if(r)r.scan={threshold,guard:Math.max(0,Number(q("scanGuard").value)||0),points:parsed};capture();renderChannels();renderField();renderScanAvailability();schedule()}
+  function wrappedLoadExample(){coreLoadExample();invalidateSetResults();const r=currentLocation();if(r){r.scan={threshold:-55,guard:0.25,points:[]};registerExampleChannels()}q("scanText").value="";q("scanStatus").textContent="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
+  function wrappedClearAll(){coreClearAll();const r=currentLocation();if(r){r.channels=[];r.scan.points=[]}q("scanText").value="";q("scanStatus").textContent="";q("setResults").innerHTML="";q("scanAvailability").innerHTML="";capture();renderChannels();renderField();renderScanAvailability();schedule()}
+  function wrappedImportScan(){invalidateSetResults();const txt=q("scanText").value,th=Number(q("scanThreshold").value),parsed=typeof parseScanText==="function"?parseScanText(txt):[],threshold=Number.isFinite(th)?th:-55;coreImportScan();const r=currentLocation();if(r)r.scan={threshold,guard:Math.max(0,Number(q("scanGuard").value)||0),points:parsed};capture();renderChannels();renderField();renderScanAvailability();schedule()}
 
   function bind(){
     loadSaved();try{const raw=localStorage.getItem(STORE)||localStorage.getItem(LEGACY_STORE)||localStorage.getItem(OLD_STORE);if(raw){const saved=JSON.parse(raw),a=saved.analysis||{};if(a.coordinationProfile)q("coordinationProfile").value=a.coordinationProfile;if(Number.isFinite(a.minSeparation))q("minSeparation").value=a.minSeparation;if(Number.isFinite(a.imThreshold))q("imThreshold").value=a.imThreshold;if(Number.isFinite(a.resultCount))q("resultCount").value=a.resultCount;if(Number.isFinite(a.criticalFloor))q("criticalFloor").value=a.criticalFloor;if(typeof a.strict==="boolean")q("strict").checked=a.strict}}catch(e){}if(W.selectedDeviceId&&state.devices[W.selectedDeviceId])q("deviceSelect").value=W.selectedDeviceId;
