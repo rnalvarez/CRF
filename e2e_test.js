@@ -268,18 +268,17 @@ async function main() {
   let fieldSelect=fieldDetail?.querySelector(".field-backup-select");
   check("FIELD MODE calcula backups posibles aunque no estén guardados",!!fieldSelect&&fieldSelect.options.length>1);
   if(fieldSelect&&fieldSelect.options.length>1){
+    const selectedFieldBackup=parseFloat(fieldSelect.options[1].value);
+    window.confirm=()=>true;
     fieldSelect.value=fieldSelect.options[1].value;
     fieldSelect.dispatchEvent(new window.Event("change"));
     fieldDetail=doc.querySelector("#fieldAssignments .field-channel-details");
-    check("FIELD MODE guarda el backup elegido desde el propio menú",!!fieldDetail&&!!fieldDetail.querySelector(".field-activate-btn"));
-    const fieldActivate=fieldDetail?.querySelector(".field-activate-btn");
-    const fieldBackupSelect=fieldDetail?.querySelector(".field-backup-select");
-    const fieldBackupFreq=fieldBackupSelect?.value?parseFloat(fieldBackupSelect.value):NaN;
-    if(fieldActivate&&Number.isFinite(fieldBackupFreq)){
-      window.confirm=()=>true;
-      fieldActivate.click();
-      check("FIELD MODE permite activar el backup elegido",doc.querySelector("#fieldAssignments .field-channel-details")?.querySelector(".field-freq")?.textContent.includes(fieldBackupFreq.toFixed(3)));
-    }
+    check("FIELD MODE activa automáticamente el backup al seleccionarlo",
+      Number.isFinite(selectedFieldBackup)&&
+      !!fieldDetail&&
+      fieldDetail.querySelector(".field-freq")?.textContent.includes(selectedFieldBackup.toFixed(3)));
+    check("FIELD MODE mantiene la frecuencia principal anterior como backup",
+      !!fieldDetail&&fieldDetail.innerHTML.includes("BKP"));
   }
   window.CRF_WORKFLOW.closeField();
 
