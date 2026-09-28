@@ -255,6 +255,29 @@ async function main() {
   check("scan no ocupa una frecuencia vecina",!doc.getElementById("occupiedList").innerHTML.includes("590.125 MHz"));
   check("scan muestra disponibilidad",doc.getElementById("scanAvailability").innerHTML.includes("afectadas por scan"));
 
+  // --- Regression: Limpiar reinicia también el estado del conjunto ---
+  doc.getElementById("deviceSelect").value = "deity_theos";
+  doc.getElementById("deviceSelect").dispatchEvent(new window.Event("change"));
+  doc.getElementById("setCount").value = "5";
+  doc.getElementById("clearAll").onclick();
+  doc.getElementById("findSet").onclick();
+  const cleanSetFreqs = [...doc.querySelectorAll("#setResults .result .freq")].map(el => parseFloat(el.textContent));
+  check("conjunto limpio produce 5 frecuencias", cleanSetFreqs.length === 5);
+
+  const setButtonForRegression = doc.querySelector("#setResults > .use-btn");
+  if (setButtonForRegression) window.CRF_WORKFLOW.useSet(cleanSetFreqs, setButtonForRegression);
+  check("usar conjunto agrega frecuencias a ocupadas", doc.getElementById("occupiedList").querySelectorAll(".chip").length === 5);
+
+  doc.getElementById("clearAll").onclick();
+  check("después de Limpiar no quedan frecuencias ocupadas", doc.getElementById("occupiedList").querySelectorAll(".chip").length === 0);
+  check("después de Limpiar desaparece la vista anterior del conjunto", doc.getElementById("setResults").innerHTML.trim() === "");
+
+  doc.getElementById("findSet").onclick();
+  const cleanSetFreqsAgain = [...doc.querySelectorAll("#setResults .result .freq")].map(el => parseFloat(el.textContent));
+  check("el nuevo conjunto vuelve a producir 5 frecuencias", cleanSetFreqsAgain.length === 5);
+  check("el nuevo conjunto coincide con el cálculo limpio original",
+    JSON.stringify(cleanSetFreqsAgain) === JSON.stringify(cleanSetFreqs));
+
   console.log("\n=== RESULTADOS E2E ===");
   let allOk = true;
   for (const r of results) {
