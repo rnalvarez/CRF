@@ -227,7 +227,7 @@
     b.querySelectorAll(".field-backup-select").forEach(sel=>{
       sel.onchange=()=>{
         if(sel.value==="")return;
-        selectBackup(sel.dataset.channelId,Number(sel.dataset.slot),sel.value);
+        selectAndActivateBackup(sel.dataset.channelId,Number(sel.dataset.slot),sel.value);
       };
     });
     b.querySelectorAll(".field-activate-btn").forEach(btn=>{
@@ -320,6 +320,14 @@
     const ok=saveBackupForChannel(id,slot,n);
     if(ok){renderChannels();renderField();renderScanAvailability();schedule();if(typeof calculate==="function")calculate()}
   }
+  function selectAndActivateBackup(id,slot,value){
+    if(value==="")return;
+    const n=Number(value);
+    if(!Number.isFinite(n)){toast("Frecuencia de backup inválida");return}
+    const ok=saveBackupForChannel(id,slot,n);
+    if(!ok)return;
+    activateBackup(id,slot,{skipConfirmation:true});
+  }
   function saveBackupForChannel(id,slot,freq){
     const r=currentLocation(),a=r?.channels?.find(x=>x.id===id);
     if(!a){toast("Canal no encontrado");return false}
@@ -348,7 +356,8 @@
     return true;
   }
 
-  function activateBackup(id,slot){
+  function activateBackup(id,slot,opts){
+    opts=opts||{};
     const r=currentLocation(),a=r?.channels?.find(x=>x.id===id),v=Number(a?.backups?.[slot]);
     if(!a||!Number.isFinite(v)){toast("No hay un backup válido para activar");return}
     if(near(v,a.frequency)){toast("El backup no puede ser igual a la frecuencia principal");return}
@@ -356,11 +365,11 @@
     if(other){toast(fmt(v)+" MHz ya está ocupada en esta locación");return}
     const ev=evaluateFrequency(v,a.deviceId);
     if(!ev.possible){toast(fmt(v)+" MHz ya no es una frecuencia válida para "+esc(deviceName(a.deviceId)));return}
-    if(ev.scan?.blocked){
+    if(!opts.skipConfirmation&&ev.scan?.blocked){
       const where=ev.scan.nearest?fmt(ev.scan.nearest.freq)+" MHz":"la zona detectada";
       if(window.confirm&&!window.confirm(fmt(v)+" MHz está dentro de ±"+fmt(ev.scan.guard)+" MHz de una señal detectada en "+where+".\\n\\n¿Activar igualmente el backup?"))return
     }
-    if(ev.tier!=="recomendado"){
+    if(!opts.skipConfirmation&&ev.tier!=="recomendado"){
       const detail=ev.tierLabel+(ev.hits?.length?" · "+ev.hits.slice(0,2).map(h=>"IM"+h.order+" a "+fmt(h.dist)+" MHz").join(" · "):"");
       if(window.confirm&&!window.confirm(fmt(v)+" MHz no queda RECOMENDADA para "+esc(deviceName(a.deviceId))+": "+detail+".\\n\\n¿Activar igualmente el backup?"))return
     }
