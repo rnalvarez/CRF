@@ -264,17 +264,21 @@ async function main() {
 
   window.CRF_WORKFLOW.openField();
   check("FIELD MODE muestra un menú desplegable por canal",doc.querySelectorAll("#fieldAssignments .field-channel-details").length===4);
-  const fieldDetail=doc.querySelector("#fieldAssignments .field-channel-details");
-  check("el menú del canal contiene backups disponibles",!!fieldDetail&&!!fieldDetail.querySelector(".field-backup-item"));
-  if(fieldDetail){
-    const fieldBackup=fieldDetail.querySelector(".field-backup-frequency");
-    const fieldActivate=fieldDetail.querySelector(".field-activate-btn");
-    const fieldBackupFreq=fieldBackup?parseFloat(fieldBackup.textContent):NaN;
-    check("FIELD MODE muestra la frecuencia backup guardada",Number.isFinite(fieldBackupFreq));
+  let fieldDetail=doc.querySelector("#fieldAssignments .field-channel-details");
+  let fieldSelect=fieldDetail?.querySelector(".field-backup-select");
+  check("FIELD MODE calcula backups posibles aunque no estén guardados",!!fieldSelect&&fieldSelect.options.length>1);
+  if(fieldSelect&&fieldSelect.options.length>1){
+    fieldSelect.value=fieldSelect.options[1].value;
+    fieldSelect.dispatchEvent(new window.Event("change"));
+    fieldDetail=doc.querySelector("#fieldAssignments .field-channel-details");
+    check("FIELD MODE guarda el backup elegido desde el propio menú",!!fieldDetail&&!!fieldDetail.querySelector(".field-activate-btn"));
+    const fieldActivate=fieldDetail?.querySelector(".field-activate-btn");
+    const fieldBackupSelect=fieldDetail?.querySelector(".field-backup-select");
+    const fieldBackupFreq=fieldBackupSelect?.value?parseFloat(fieldBackupSelect.value):NaN;
     if(fieldActivate&&Number.isFinite(fieldBackupFreq)){
       window.confirm=()=>true;
-      fieldActivate.onclick();
-      check("FIELD MODE permite activar el backup",doc.querySelector("#fieldAssignments .field-channel-details")?.querySelector(".field-freq")?.textContent.includes(fieldBackupFreq.toFixed(3)));
+      fieldActivate.click();
+      check("FIELD MODE permite activar el backup elegido",doc.querySelector("#fieldAssignments .field-channel-details")?.querySelector(".field-freq")?.textContent.includes(fieldBackupFreq.toFixed(3)));
     }
   }
   window.CRF_WORKFLOW.closeField();
