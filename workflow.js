@@ -40,18 +40,16 @@
     backupRecommendationCache.byDevice[deviceId]=rows;
     return rows;
   }
-  function backupOptionHTML(a,slot){
-    const value=(a.backups||[])[slot],rows=getBackupRecommendations(a.deviceId).slice();
+  function backupOptionHTML(a){
+    const value=normalizeBackup((a.backups||[])[0]),rows=getBackupRecommendations(a.deviceId).slice();
     if(isBackupFrequency(value)&&!rows.some(r=>near(r.cand.freq,value)))
       rows.unshift({cand:{freq:Number(value),label:"Backup guardado"},tier:"recomendado",tierLabel:"✓ GUARDADO",score:0});
     const options=rows.map(r=>{
       const scan=scanAssessment(r.cand.freq),scanText=scan.blocked?" · ⚠ SCAN":"";
       return '<option value="'+fmt(r.cand.freq)+'"'+(isBackupFrequency(value)&&near(r.cand.freq,value)?" selected":"")+'>'+fmt(r.cand.freq)+' MHz · '+esc(r.tierLabel||r.cand.label)+scanText+'</option>';
     }).join("");
-    const placeholder=isBackupFrequency(value)?"<option value=\"\">Cambiar backup…</option>":"<option value=\"\">Elegir frecuencia…</option>";
-    return '<div class="wf-backup-select"><select class="backup-frequency-select" aria-label="Backup '+(slot+1)+' de '+esc(a.channel||"canal")+'" data-channel-id="'+esc(a.id)+'" data-slot="'+slot+'">'+placeholder+options+'</select>'+
-      (isBackupFrequency(value)?'<button type="button" class="secondary backup-activate-btn" data-backup-channel-id="'+esc(a.id)+'" data-backup-slot="'+slot+'">Activar</button>':"")+
-      '</div>';
+    const placeholder=isBackupFrequency(value)?"<option value=\"\">Cambiar backup…</option>":"<option value=\"\">Elegir backup…</option>";
+    return '<div class="wf-backup-select"><span class="wf-backup-label">BACKUP</span><select class="backup-frequency-select" aria-label="Backup de '+esc(a.channel||"canal")+'" data-channel-id="'+esc(a.id)+'" data-slot="0">'+placeholder+options+'</select></div>';
   }
 
   let W={version:2,project:{name:"Mi rodaje",production:"",date:today(),notes:""},selectedDeviceId:"",locations:[],activeLocationId:null};
@@ -180,13 +178,14 @@
   function bindBackupControls(){
     const box=q("wfChannels");if(!box)return;
     box.querySelectorAll(".backup-frequency-select").forEach(sel=>{
-      sel.onchange=()=>selectBackup(sel.dataset.channelId,Number(sel.dataset.slot),sel.value);
-    });
-    box.querySelectorAll(".backup-activate-btn").forEach(btn=>{
-      btn.onclick=()=>activateBackup(btn.dataset.backupChannelId,Number(btn.dataset.backupSlot));
+      sel.onchange=()=>{
+        if(sel.value==="")return;
+        selectAndActivateBackup(sel.dataset.channelId,0,sel.value);
+      };
     });
   }
-  function renderBackupCell(a,slot){return backupOptionHTML(a,slot);}
+  function renderBackupCell(a){return backupOptionHTML(a);}
+
   function renderBackupHint(){
     const el=q("wfBackupHint");if(!el)return;
     if(!backupTarget){el.hidden=true;el.innerHTML="";return}
@@ -194,8 +193,8 @@
     el.hidden=false;el.innerHTML='<span>Backup '+(backupTarget.slot+1)+' para <strong>'+esc(a.channel)+'</strong> · '+fmt(a.frequency)+' MHz</span><button type="button" class="secondary" onclick="CRF_WORKFLOW.cancelBackup()">Cancelar</button>';
   }
 
-  function fieldBackupOptionHTML(a,slot){
-    const value=(a.backups||[])[slot],rows=getBackupRecommendations(a.deviceId).slice();
+  function fieldBackupOptionHTML(a){
+    const value=normalizeBackup((a.backups||[])[0]),rows=getBackupRecommendations(a.deviceId).slice();
     if(isBackupFrequency(value)&&!rows.some(r=>near(r.cand.freq,value)))
       rows.unshift({cand:{freq:Number(value),label:"Backup guardado"},tier:"recomendado",tierLabel:"✓ GUARDADO",score:0});
     const options=rows.map(r=>{
@@ -203,9 +202,7 @@
       return '<option value="'+fmt(r.cand.freq)+'"'+(isBackupFrequency(value)&&near(r.cand.freq,value)?" selected":"")+'>'+fmt(r.cand.freq)+' MHz · '+esc(r.tierLabel||r.cand.label)+scanText+'</option>';
     }).join("");
     const placeholder=isBackupFrequency(value)?"<option value=\"\">Cambiar backup…</option>":"<option value=\"\">Elegir backup…</option>";
-    return '<div class="field-backup-item"><div class="field-backup-select-wrap"><strong>BKP '+(slot+1)+'</strong><select class="backup-frequency-select field-backup-select" aria-label="Backup '+(slot+1)+' de '+esc(a.channel||"canal")+'" data-channel-id="'+esc(a.id)+'" data-slot="'+slot+'">'+placeholder+options+'</select></div>'+
-      (isBackupFrequency(value)?'<button type="button" class="field-activate-btn" data-channel-id="'+esc(a.id)+'" data-backup-slot="'+slot+'">Activar</button>':"")+
-      '</div>';
+    return '<div class="field-backup-item"><div class="field-backup-select-wrap"><strong>BACKUP</strong><select class="backup-frequency-select field-backup-select" aria-label="Backup de '+esc(a.channel||"canal")+'" data-channel-id="'+esc(a.id)+'" data-slot="0">'+placeholder+options+'</select></div></div>';
   }
 
   function renderField(){
@@ -214,24 +211,21 @@
     q("fieldRegionName").textContent=r.name+(r.location?" · "+r.location:"");
     const b=q("fieldAssignments");
     b.innerHTML=(r.channels||[]).length?r.channels.map(a=>{
-      const backups=(a.backups||[]).map((v,i)=>({v,isSet:isBackupFrequency(v),slot:i}));
-      const configured=backups.filter(x=>x.isSet);
-      const backupSummary=configured.length?configured.map(x=>"BKP "+(x.slot+1)+" · "+fmt(x.v)).join(" · "):"Elegir backup";
+      const value=normalizeBackup((a.backups||[])[0]);
+      const configured=isBackupFrequency(value);
+      const backupSummary=configured?"BACKUP · "+fmt(value):"Elegir backup";
       const rows=getBackupRecommendations(a.deviceId);
-      const hasCandidates=rows.length||configured.length;
+      const hasCandidates=rows.length||configured;
       return '<details class="field-channel-details"><summary><div class="field-row"><div><div class="field-label">'+esc(a.channel)+'</div><div class="field-sub">'+esc(deviceName(a.deviceId))+(a.role?" · "+esc(a.role):"")+'</div></div><div class="field-freq">'+fmt(a.frequency)+' <span>MHz</span></div><div class="field-backups">'+esc(backupSummary)+'</div></div></summary>'+
         '<div class="field-channel-menu">'+
-        (hasCandidates?('<div class="field-menu-title">BACKUPS DISPONIBLES</div>'+fieldBackupOptionHTML(a,0)+fieldBackupOptionHTML(a,1)):'<div class="field-menu-empty">No se encontraron backups candidatos para este canal con la configuración actual.</div>')+
+        (hasCandidates?('<div class="field-menu-title">BACKUP</div>'+fieldBackupOptionHTML(a)):'<div class="field-menu-empty">No se encontraron backups candidatos para este canal con la configuración actual.</div>')+
         '</div></details>';
     }).join(""):'<div class="field-empty">No hay canales identificados en esta locación.</div>';
     b.querySelectorAll(".field-backup-select").forEach(sel=>{
       sel.onchange=()=>{
         if(sel.value==="")return;
-        selectAndActivateBackup(sel.dataset.channelId,Number(sel.dataset.slot),sel.value);
+        selectAndActivateBackup(sel.dataset.channelId,0,sel.value);
       };
-    });
-    b.querySelectorAll(".field-activate-btn").forEach(btn=>{
-      btn.onclick=()=>activateBackup(btn.dataset.channelId,Number(btn.dataset.backupSlot));
     });
     const raw=(state.occupied||[]).filter(o=>!(r.channels||[]).some(a=>near(a.frequency,o.freq)));
     q("fieldUnassigned").textContent=raw.length?("Frecuencias ocupadas sin ficha: "+raw.map(o=>fmt(o.freq)+" MHz").join(" · ")):"";
