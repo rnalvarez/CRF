@@ -170,7 +170,7 @@
     const cnt=q("wfChannelCount");if(cnt)cnt.textContent=String(channels.length);
     if(!channels.length&&!unassigned.length)box.innerHTML='<div class="wf-empty">Todavía no hay equipos/canales en uso.</div>';
     else{
-      box.innerHTML=channels.map(a=>{const active=backupTarget&&backupTarget.id===a.id;return '<article class="wf-channel'+(active?' is-backup-target':'')+'"><div class="wf-channel-main"><div class="wf-channel-name">'+esc(a.channel)+'<span>'+esc(a.role||"")+'</span></div><div class="wf-channel-device">'+esc(deviceName(a.deviceId))+(a.digital?" · digital":"")+(a.powerMw?(" · "+esc(a.powerMw)+" mW"):"")+'</div></div><div class="wf-channel-freq">'+fmt(a.frequency)+'<small>MHz</small></div><div class="wf-channel-backups">'+renderBackupCell(a,0)+renderBackupCell(a,1)+'</div><div class="wf-channel-actions"><button type="button" class="secondary" onclick="CRF_WORKFLOW.openEdit(\''+esc(a.id)+'\')">Editar</button><button type="button" class="secondary" onclick="CRF_WORKFLOW.removeChannel(\''+esc(a.id)+'\')">Quitar</button></div>'+(a.notes?'<div class="wf-channel-notes">'+esc(a.notes)+'</div>':'')+'</article>'}).join("");
+      box.innerHTML=channels.map(a=>{const active=backupTarget&&backupTarget.id===a.id;return '<article class="wf-channel'+(active?' is-backup-target':'')+'"><div class="wf-channel-main"><div class="wf-channel-name">'+esc(a.channel)+'<span>'+esc(a.role||"")+'</span></div><div class="wf-channel-device">'+esc(deviceName(a.deviceId))+(a.digital?" · digital":"")+(a.powerMw?(" · "+esc(a.powerMw)+" mW"):"")+'</div></div><div class="wf-channel-freq">'+fmt(a.frequency)+'<small>MHz</small></div><div class="wf-channel-backups">'+renderBackupCell(a)+'</div><div class="wf-channel-actions"><button type="button" class="secondary" onclick="CRF_WORKFLOW.openEdit(\''+esc(a.id)+'\')">Editar</button><button type="button" class="secondary" onclick="CRF_WORKFLOW.removeChannel(\''+esc(a.id)+'\')">Quitar</button></div>'+(a.notes?'<div class="wf-channel-notes">'+esc(a.notes)+'</div>':'')+'</article>'}).join("");
       if(unassigned.length)box.innerHTML+='<div class="wf-unassigned"><strong>Ocupadas sin ficha</strong><span>'+unassigned.map(o=>fmt(o.freq)+" MHz").join(" · ")+'</span><small>Las frecuencias detectadas por scan permanecen aquí sin convertirse en canales.</small></div>';
     }
     bindBackupControls();renderBackupHint();renderScanAvailability();
@@ -190,7 +190,7 @@
     const el=q("wfBackupHint");if(!el)return;
     if(!backupTarget){el.hidden=true;el.innerHTML="";return}
     const a=currentLocation()?.channels?.find(x=>x.id===backupTarget.id);if(!a){backupTarget=null;el.hidden=true;return}
-    el.hidden=false;el.innerHTML='<span>Backup '+(backupTarget.slot+1)+' para <strong>'+esc(a.channel)+'</strong> · '+fmt(a.frequency)+' MHz</span><button type="button" class="secondary" onclick="CRF_WORKFLOW.cancelBackup()">Cancelar</button>';
+    el.hidden=false;el.innerHTML='<span>BACKUP para <strong>'+esc(a.channel)+'</strong> · '+fmt(a.frequency)+' MHz</span><button type="button" class="secondary" onclick="CRF_WORKFLOW.cancelBackup()">Cancelar</button>';
   }
 
   function fieldBackupOptionHTML(a){
