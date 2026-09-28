@@ -20,6 +20,128 @@
 </header>
 
 <main class="wrap grid">
+<section class="card wide workflow-card">
+  <div class="workflow-head">
+    <div>
+      <span class="ch-tag">RF PROJECT</span>
+      <h2>Proyecto de rodaje</h2>
+      <p class="hint">Organiza equipos, canales, backups y locaciones sin cambiar el cálculo RF.</p>
+    </div>
+    <div class="workflow-actions">
+      <button id="wfFieldMode" type="button">FIELD MODE</button>
+      <button id="wfSheet" type="button" class="secondary">Hoja RF</button>
+      <button id="wfSave" type="button" class="secondary">Guardar</button>
+    </div>
+  </div>
+
+  <div class="workflow-project-grid">
+    <label>Proyecto / rodaje
+      <input id="wfProjectName" type="text" placeholder="Ej. Largometraje XYZ">
+    </label>
+    <label>Producción / referencia
+      <input id="wfProduction" type="text" placeholder="Ej. Producción · Unidad 1">
+    </label>
+    <label>Fecha
+      <input id="wfProjectDate" type="date">
+    </label>
+    <label class="workflow-span-2">Notas
+      <input id="wfProjectNotes" type="text" placeholder="Observaciones generales del rodaje">
+    </label>
+  </div>
+
+  <div class="workflow-region-bar">
+    <div class="workflow-region-select">
+      <label>Locación / región
+        <select id="wfRegionSelect"></select>
+      </label>
+    </div>
+    <label>Nombre
+      <input id="wfRegionName" type="text" placeholder="Set principal">
+    </label>
+    <label>Ubicación
+      <input id="wfRegionLocation" type="text" placeholder="Dirección / locación">
+    </label>
+    <div class="workflow-actions region-actions">
+      <button id="wfNewRegion" type="button" class="secondary">+ Nueva locación</button>
+      <button id="wfDeleteRegion" type="button" class="secondary">Eliminar</button>
+    </div>
+  </div>
+
+  <div class="workflow-assignment-wrap">
+    <div class="workflow-subhead">
+      <div>
+        <h3>Canales en uso</h3>
+        <p class="hint">Cada frecuencia queda vinculada a un dispositivo, canal/identificador, función y backups.</p>
+      </div>
+      <span id="wfSaveStatus" class="workflow-save-status">Guardado local</span>
+    </div>
+    <div id="wfAssignments" class="wf-assignments"></div>
+
+    <div id="wfAssignmentForm" class="wf-form">
+      <div class="workflow-form-label">Agregar canal a esta locación</div>
+      <div class="workflow-target"><span>Dispositivo seleccionado:</span> <strong id="wfTargetDevice">Elegí un dispositivo en CH.03</strong></div>
+      <div class="workflow-project-grid compact">
+        <label>Canal / identificador
+          <input id="wfChannel" type="text" placeholder="LAV 01 · JUAN">
+        </label>
+        <label>Función
+          <input id="wfRole" type="text" placeholder="Lav / IFB / cámara">
+        </label>
+        <label>Frecuencia (MHz)
+          <input id="wfAssignFreq" type="number" step="0.001" placeholder="574.200">
+        </label>
+        <label>Potencia (mW)
+          <input id="wfPower" type="number" step="1" min="0" placeholder="Opcional">
+        </label>
+        <label>Backup 1 (MHz)
+          <input id="wfBackup1" type="number" step="0.001" placeholder="Opcional">
+        </label>
+        <label>Backup 2 (MHz)
+          <input id="wfBackup2" type="number" step="0.001" placeholder="Opcional">
+        </label>
+        <label class="workflow-span-2">Notas del canal
+          <input id="wfAssignNotes" type="text" placeholder="Actor, cámara, observaciones...">
+        </label>
+      </div>
+      <label class="check workflow-digital"><input id="wfDigital" type="checkbox"> digital</label>
+      <div class="workflow-actions">
+        <button id="wfAssignButton" type="button">Agregar canal</button>
+        <button id="wfAssignClear" type="button" class="secondary">Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="workflow-tools">
+    <div>
+      <strong>Proyecto guardado en este dispositivo</strong>
+      <span class="hint">Se guarda automáticamente mientras trabajás.</span>
+    </div>
+    <div class="workflow-actions">
+      <button id="wfExport" type="button" class="secondary">Exportar proyecto</button>
+      <button id="wfImport" type="button" class="secondary">Importar proyecto</button>
+      <input id="wfFile" type="file" accept=".json,.crf.json,application/json" hidden>
+    </div>
+  </div>
+</section>
+
+<div id="fieldMode" class="field-mode" aria-hidden="true">
+  <div class="field-screen">
+    <div class="field-screen-head">
+      <div>
+        <div class="field-kicker">CRF · FIELD MODE</div>
+        <h2 id="fieldProjectName">Mi rodaje</h2>
+        <p id="fieldRegionName" class="field-region-name">Locación</p>
+      </div>
+      <div class="workflow-actions">
+        <button id="fieldSheet" type="button" class="secondary">Hoja RF</button>
+        <button id="fieldClose" type="button">Salir</button>
+      </div>
+    </div>
+    <div id="fieldAssignments" class="field-assignments"></div>
+    <p class="field-footnote">Vista operativa de la coordinación cargada. No representa medición en tiempo real del espectro.</p>
+  </div>
+</div>
+
   <section class="card">
     <h2><span class="ch-tag">CH.01</span>Rango de trabajo</h2>
     <div class="form-grid">
@@ -233,5 +355,6 @@
 <script src="app.js"></script>
 <script src="render-accordion.js"></script>
 <script src="coordination-profiles.js"></script>
+<script src="workflow.js"></script>
 </body>
 </html>
