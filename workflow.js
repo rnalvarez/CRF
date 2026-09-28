@@ -1,3 +1,10 @@
+/* CRF — workflow de producción
+ * Copyright 2026 Ramiro N. Alvarez
+ * Licensed under the Apache License, Version 2.0.
+ * See LICENSE and NOTICE in the repository root.
+ *
+ * Developed with assistance from AI development tools.
+ */
 /* CRF - workflow de produccion. Capa de proyecto sobre el motor RF existente. */
 (function(){
   const STORE="crf.rfProject.v3";
