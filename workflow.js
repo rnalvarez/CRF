@@ -174,20 +174,20 @@
     const freq=Number(q("occupiedFreq").value),pw=Number(q("occupiedPower").value),dig=!!q("occupiedDigital").checked,before=state.occupied.length;
     coreAddOccupied();
     if(state.occupied.length>before&&Number.isFinite(freq))addChannelFromFrequency(freq,{powerMw:Number.isFinite(pw)&&pw>0?pw:null,digital:dig});
-    capture();renderChannels();renderField();schedule();
+    invalidateSetResults();capture();renderChannels();renderField();schedule();
   }
 
   function wrappedRemoveFreq(i){
     const removed=state.occupied[i];coreRemoveFreq(i);
     if(removed){const r=currentLocation();r.channels=r.channels.filter(a=>!near(a.frequency,removed.freq));if(backupTarget&&!r.channels.some(a=>a.id===backupTarget.id))backupTarget=null}
-    capture();renderChannels();renderField();schedule();
+    invalidateSetResults();capture();renderChannels();renderField();schedule();
   }
 
   function wrappedCandidate(freq){
     const s=scanAssessment(freq);if(s.blocked){const where=s.nearest?fmt(s.nearest.freq)+" MHz":"la zona detectada";if(window.confirm&&!window.confirm(fmt(freq)+" MHz está dentro de ±"+fmt(s.guard)+" MHz de una señal detectada en "+where+".\n\n¿Querés usarla de todos modos?"))return}
     const before=state.occupied.length;coreAddCandidate(freq);
     if(state.occupied.length>before){const d=currentDevice(),a=addChannelFromFrequency(freq,{deviceId:q("deviceSelect").value,digital:!!(d&&d.modulation==="digital")}),o=state.occupied.find(x=>near(x.freq,freq));if(o&&a){o.digital=a.digital;o.powerMw=a.powerMw}if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate()}
-    capture();renderChannels();renderField();renderScanAvailability();schedule();toast("✓ "+fmt(freq)+" MHz asignada a "+esc(currentDevice()?.name||"dispositivo"));
+    invalidateSetResults();capture();renderChannels();renderField();renderScanAvailability();schedule();toast("✓ "+fmt(freq)+" MHz asignada a "+esc(currentDevice()?.name||"dispositivo"));
   }
   function wrappedSet(freqs,btn){
     const before=state.occupied.length;coreAddSet(freqs,btn);
@@ -195,7 +195,7 @@
       const d=currentDevice();freqs.forEach(f=>addChannelFromFrequency(f,{deviceId:q("deviceSelect").value,digital:!!(d&&d.modulation==="digital")}));
       if(typeof renderOccupied==="function")renderOccupied();if(typeof calculate==="function")calculate();
     }
-    capture();renderChannels();renderField();schedule();
+    invalidateSetResults();capture();renderChannels();renderField();schedule();
   }
 
   function startBackup(id,slot){
