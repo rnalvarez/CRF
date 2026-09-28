@@ -142,8 +142,8 @@
   function renderBackupCell(a,slot){
     const active=backupTarget&&backupTarget.id===a.id&&backupTarget.slot===slot;
     const v=(a.backups||[])[slot];
-    return '<div class="wf-backup-cell"><button type="button" class="text-btn '+(active?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\\','+slot+')">'+backupStatus(a,slot)+'</button>'+
-      (Number.isFinite(Number(v))?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\''+esc(a.id)+'\\','+slot+')">Activar</button>':"")+
+    return '<div class="wf-backup-cell"><button type="button" class="text-btn '+(active?'selected':'')+'" onclick="CRF_WORKFLOW.startBackup(\''+esc(a.id)+'\','+slot+')">'+backupStatus(a,slot)+'</button>'+
+      (Number.isFinite(Number(v))?'<button type="button" class="secondary backup-activate-btn" onclick="CRF_WORKFLOW.activateBackup(\''+esc(a.id)+'\','+slot+')">Activar</button>':"")+
       '</div>';
   }
   function renderBackupHint(){
